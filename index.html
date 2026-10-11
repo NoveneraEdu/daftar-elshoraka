@@ -10,8 +10,8 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="دفتر الشركاء">
-<title>دفتر الشركاء</title>
+<meta name="apple-mobile-web-app-title" content="سهم">
+<title>سهم</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -45,7 +45,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 
 .app{max-width:760px;margin:0 auto;padding-inline:16px;padding-block:0 110px}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:14px 10px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}
-.brand h1{font-family:var(--f-display);font-weight:700;font-size:22px;margin:0;line-height:1.2}
+.brand{display:flex;align-items:center;gap:10px}
+.logo{width:38px;height:38px;flex-shrink:0;display:block}
+.logo.lg{width:56px;height:56px}
+.brand h1{font-family:var(--f-display);font-weight:700;font-size:24px;margin:0;line-height:1.2}
 .brand p{margin:0;color:var(--muted);font-size:12.5px}
 .status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
@@ -158,7 +161,7 @@ label.fl input,label.fl select{font:inherit;font-size:16px;color:var(--ink);back
 <body>
 <section class="auth" id="auth" hidden>
   <form id="authForm" novalidate>
-    <div><h1>دفتر الشركاء</h1><p>نوفينيرا · سنترا · نبض</p></div>
+    <div style="display:flex;align-items:center;gap:12px"><svg class="logo lg" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="23" fill="#17473E"/><g transform="translate(-4.3 4.3) rotate(-45 50 50) translate(2.5 2.5) scale(.95)"><rect x="19" y="41" width="42" height="5" rx="2.5" fill="#8E9BF0"/><rect x="19" y="47.5" width="42" height="5" rx="2.5" fill="#4FC3CC"/><rect x="19" y="54" width="42" height="5" rx="2.5" fill="#F08A78"/><polygon points="59.5,32.5 81,50 59.5,67.5" fill="#fff" stroke="#fff" stroke-width="4.4" stroke-linejoin="round"/></g></svg><div><h1>سهم</h1><p>حسابات نوفينيرا · سنترا · نبض</p></div></div>
     <label class="fl">الإيميل<input id="a_email" type="email" autocomplete="email" required></label>
     <label class="fl">كلمة السر<input id="a_pass" type="password" autocomplete="current-password" required></label>
     <div class="acts" style="margin-top:0"><button type="submit" class="btn pri grow" id="loginBtn">دخول</button><button type="submit" class="btn" id="signupBtn">أول مرة؟ اعمل حساب</button></div>
@@ -168,10 +171,10 @@ label.fl input,label.fl select{font:inherit;font-size:16px;color:var(--ink);back
 <div id="appShell" hidden>
 <div class="app">
   <header class="top">
-    <div class="brand">
-      <h1>دفتر الشركاء</h1>
+    <div class="brand"><svg class="logo" viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="23" fill="#17473E"/><g transform="translate(-4.3 4.3) rotate(-45 50 50) translate(2.5 2.5) scale(.95)"><rect x="19" y="41" width="42" height="5" rx="2.5" fill="#8E9BF0"/><rect x="19" y="47.5" width="42" height="5" rx="2.5" fill="#4FC3CC"/><rect x="19" y="54" width="42" height="5" rx="2.5" fill="#F08A78"/><polygon points="59.5,32.5 81,50 59.5,67.5" fill="#fff" stroke="#fff" stroke-width="4.4" stroke-linejoin="round"/></g></svg><div>
+      <h1>سهم</h1>
       <p>نوفينيرا · سنترا · نبض</p>
-    </div>
+    </div></div>
     <div class="status" id="status"><span class="dot"></span><span>جاري التحميل</span></div>
   </header>
 
