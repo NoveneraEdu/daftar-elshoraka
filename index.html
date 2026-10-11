@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1F5E52">
 <meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="دفتر الشركاء">
 <title>دفتر الشركاء</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Reem+Kufi:wght@500;700&display=swap" rel="stylesheet">
@@ -57,7 +63,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;border-top:1px dashed var(--line);padding-top:12px}
 .trio div{min-width:0}
 .trio span{display:block;color:var(--muted);font-size:12px}
-.trio b{font-weight:600;font-size:15px}
+.trio b{font-weight:600;font-size:15px;white-space:nowrap}
 
 /* entity cards */
 .ents{display:grid;gap:12px}
@@ -557,6 +563,7 @@ async function start(){
 document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && mode!=='loading') loadAll(); });
 FAB.home = ['مدرس','teachers'];
 start();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
