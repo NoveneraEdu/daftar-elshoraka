@@ -539,6 +539,7 @@ document.getElementById('authForm').addEventListener('submit', async e=>{
   const email = document.getElementById('a_email').value.trim(), password = document.getElementById('a_pass').value;
   const signup = e.submitter && e.submitter.id==='signupBtn';
   const msg = document.getElementById('authMsg');
+  if(!email || !password){ msg.textContent = 'اكتب الإيميل وكلمة السر الأول'; return; }
   if(password.length < 6){ msg.textContent = 'كلمة السر لازم تكون 6 حروف على الأقل'; return; }
   msg.textContent = 'لحظة...';
   const r = signup ? await sb.auth.signUp({email, password}) : await sb.auth.signInWithPassword({email, password});
