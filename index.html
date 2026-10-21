@@ -185,6 +185,14 @@ label.cb input{width:20px;height:20px;accent-color:var(--accent-2)}
 .kv>div{background:var(--sunk);border-radius:12px;padding:9px 12px;min-width:0}
 .kv>div>span{display:block;color:var(--muted);font-size:11.5px}
 .kv b{font-weight:600;font-size:15px}
+.nov{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+.nov .nh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:8px}
+.nov .nh b{font-size:13px}.nov .nh small{color:var(--muted);font-size:11.5px}
+.nov .n3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.nov .n3>div{background:var(--sunk);border-radius:10px;padding:7px 10px;min-width:0}
+.nov .n3 span{display:block;color:var(--muted);font-size:11px}.nov .n3 b{font-size:16px;font-weight:600}
+.nov .n3 .act{background:var(--accent);color:var(--accent-ink)}.nov .n3 .act span{color:inherit;opacity:.85}
+.nov .nf{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px;color:var(--muted);font-size:12px}
 .preview{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;margin-bottom:12px;max-height:46vh;overflow-y:auto}
 .preview img{display:block;width:100%}
 .logo-edit{display:flex;align-items:center;gap:12px}
@@ -413,9 +421,10 @@ const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 
 const MAP = {desc:'description', paidBy:'paid_by', createdAt:'created_at', fixedAmount:'fixed_amount', nextDue:'next_due',
   clientId:'client_id', nextDate:'next_date', remindDays:'remind_days', dueDate:'due_date', dueTime:'due_time',
-  repId:'rep_id', commissionType:'commission_type', commissionValue:'commission_value', commissionMonths:'commission_months', invoiceNo:'invoice_no'};
+  repId:'rep_id', commissionType:'commission_type', commissionValue:'commission_value', commissionMonths:'commission_months', invoiceNo:'invoice_no',
+  noveneraTeacherId:'novenera_teacher_id', onlinePrice:'online_price', novCounts:'nov_counts'};
 const RMAP = Object.fromEntries(Object.entries(MAP).map(([a,b])=>[b,a]));
-const NUMS = new Set(['price','amount','collected','fixed_amount','students','remind_days','commission_value','commission_months','invoice_no']);
+const NUMS = new Set(['price','amount','collected','fixed_amount','students','remind_days','commission_value','commission_months','invoice_no','online_price']);
 const toRow = o => Object.fromEntries(Object.entries(o).filter(([k])=>!k.startsWith('_')).map(([k,v])=>[MAP[k]||k, v===''?null:v]));
 const fromRow = o => Object.fromEntries(Object.entries(o).map(([k,v])=>[RMAP[k]||k, NUMS.has(k)&&v!==null?Number(v):v]));
 
@@ -427,6 +436,48 @@ async function loadAll(){
     mode='db'; cacheSave();
   }catch(e){ mode='offline'; toast('مش قادر يوصل للسيرفر، بعرض آخر نسخة'); }
   setStatus(); render();
+  if(mode==='db') syncNovenera();
+}
+/* ================= Novenera: teachers' student numbers ================= */
+// Renewal day reached → the number saved that morning (doesn't change afterwards); otherwise live.
+let NOV = {teachers:[], at:null, err:false, busy:false};
+const NOV_KEYS = ['center_total','center_frozen','center_active','online_total','online_frozen','online_active','billable'];
+async function syncNovenera(force){
+  if(NOV.busy) return; NOV.busy=true;
+  try{
+    const linked = S.clients.filter(c=>c.noveneraTeacherId);
+    const days = {};
+    linked.forEach(c=>{ if(c.cycle!=='once' && c.nextDue && c.nextDue<=today()) days[c.noveneraTeacherId]=c.nextDue; });
+    const {data, error} = await sb.functions.invoke('novenera-counts', {body:{days}});
+    if(error || !data?.teachers) throw error||new Error('bad');
+    NOV = {teachers:data.teachers, at:data.at, err:false, busy:true};
+    for(const c of linked){
+      const t = data.teachers.find(x=>x.id===c.noveneraTeacherId); if(!t) continue;
+      const due = days[c.noveneraTeacherId];
+      const pick = (due && t.on_day) ? t.on_day : t.live;
+      const counts = {...Object.fromEntries(NOV_KEYS.map(k=>[k, n(pick[k])])), day: due && t.on_day ? t.on_day.day : today(),
+        saved: !!(due && t.on_day && t.on_day.saved), missing: !!due && !t.on_day, live_billable: n(t.live?.billable), at: data.at};
+      const old = c.novCounts || {};
+      const same = NOV_KEYS.every(k=>n(old[k])===counts[k]) && old.day===counts.day && !!old.saved===counts.saved && n(old.live_billable)===counts.live_billable;
+      if(!same || n(c.students)!==counts.billable) await save('clients', {...c, students:counts.billable, novCounts:counts}, true);
+    }
+    if(force) toast('الأعداد اتحدثت من نوفينيرا');
+  }catch(e){ NOV.err=true; if(force) toast('مش قادر أوصل لنوفينيرا دلوقتي'); }
+  finally{ NOV.busy=false; render(); }
+}
+function novBox(c){
+  const k=c.novCounts, cfg=kcfg(c);
+  const dayTxt = k.missing ? 'مفيش رقم متسجل يوم '+fdate(k.day)+'، ده الرقم الحالي' : k.saved ? 'رقم يوم التجديد '+fdate(k.day)+' (اتحفظ الصبح)' : 'الأرقام دلوقتي';
+  const online = n(k.online_total)>0;
+  const formula = online
+    ? `سنتر <span class="num">${n(k.center_active)}</span> × ${fmt(c.price)} + أونلاين <span class="num">${n(k.online_active)}</span> × ${fmt(onlineRate(c))}`
+    : `<span class="num">${n(k.billable)}</span> ${cfg.unit} × ${fmt(c.price)}`;
+  return `<div class="nov"><div class="nh"><b>من نوفينيرا</b><small>${dayTxt}</small></div>
+    <div class="n3"><div><span>كل الطلبة</span><b class="num">${n(k.center_total)+n(k.online_total)}</b></div>
+    <div><span>متجمدين</span><b class="num">${n(k.center_frozen)+n(k.online_frozen)}</b></div>
+    <div class="act"><span>العدد الفعلي</span><b class="num">${n(k.billable)}</b></div></div>
+    <div class="nf"><span>${formula}${k.day!==today()&&n(k.live_billable)!==n(k.billable)?` · دلوقتي <span class="num">${n(k.live_billable)}</span>`:''}</span>
+    <button type="button" class="btn sm" id="novRefresh">تحديث</button></div></div>`;
 }
 async function save(col, item, quiet){
   const id = item.id || uid();
@@ -547,7 +598,13 @@ function tafqeet(num){
 /* ================= domain math ================= */
 const kcfg = c => KIND_CFG[c.kind] || KIND_CFG.other;
 const perUnit = c => c.billing==='per_student' && !!kcfg(c).unit;
-const cycleAmount = c => perUnit(c) ? n(c.price)*n(c.students) : n(c.fixedAmount);
+/* teachers linked to Novenera: students come from the system (all − frozen); online-only students can have their own price */
+const novLinked = c => !!c.noveneraTeacherId && perUnit(c) && !!c.novCounts;
+const onlineRate = c => c.onlinePrice===null || c.onlinePrice===undefined || c.onlinePrice==='' ? n(c.price) : n(c.onlinePrice);
+const hasOnlinePrice = c => novLinked(c) && n(c.novCounts.online_active)>0 && onlineRate(c)!==n(c.price);
+const cycleAmount = c => !perUnit(c) ? n(c.fixedAmount)
+  : novLinked(c) ? n(c.price)*n(c.novCounts.center_active) + onlineRate(c)*n(c.novCounts.online_active)
+  : n(c.price)*n(c.students);
 const ex = c => c.extra || {};
 const paidBy = id => S.payments.filter(p=>p.clientId===id).reduce((a,p)=>a+n(p.amount),0);
 function clientDesc(c){
@@ -844,6 +901,22 @@ function delFlow(root, col, id, back, warn=''){
 const v$=(root,s)=>root.querySelector(s)?.value;
 function required(root){ const r=[...root.querySelectorAll('[required]')].find(x=>!x.closest('[hidden]') && !String(x.value).trim()); if(r){ r.focus(); toast('كمّل البيانات المطلوبة'); return false; } return true; }
 
+/* ---- Novenera link in the client form ---- */
+function novOptions(sel){
+  const list = NOV.teachers.length ? NOV.teachers : (sel ? [{id:sel, name:'المدرس المربوط'}] : []);
+  return list.map(t=>`<option value="${t.id}"${t.id===sel?' selected':''}>${esc(t.name)}${t.billing_exempt?' (مش بيتحاسب)':''}</option>`).join('');
+}
+function novFormFields(root, d){
+  const sel = root.querySelector('#f_nov'); if(!sel) return {};
+  const tid = sel.value || null, op = root.querySelector('#f_oprice').value;
+  let counts = null;
+  if(tid){
+    if(d.noveneraTeacherId===tid && d.novCounts) counts = d.novCounts;
+    else { const t = NOV.teachers.find(x=>x.id===tid); if(t?.live) counts = {...Object.fromEntries(NOV_KEYS.map(k=>[k, n(t.live[k])])), day:today(), saved:false, live_billable:n(t.live.billable)}; }
+  }
+  return {noveneraTeacherId: tid, onlinePrice: op==='' ? null : n(op), novCounts: counts, ...(counts?{students:counts.billable}:{})};
+}
+
 /* ---- client form: fields change with the client type ---- */
 function openClientForm(id, draft){
   const item = id ? S.clients.find(x=>x.id===id) : null;
@@ -870,6 +943,12 @@ function openClientForm(id, draft){
         ${cfg.billings.length>1?`<label class="fl">الحساب<select id="f_billing">${opt(billMap,d.billing)}</select></label>`:`<input type="hidden" id="f_billing" value="fixed">`}</div>
         <div class="f2" id="perUnit"><label class="fl">سعر ${cfg.unit||'الوحدة'}<input id="f_price" type="number" inputmode="decimal" step="any" min="0" value="${d.price??''}"></label>
         <label class="fl">عدد ال${cfg.units||'وحدات'}<input id="f_students" type="number" inputmode="numeric" min="0" value="${d.students??''}"></label></div>
+        ${d.kind==='teacher'?`<div id="novWrap" class="fields">
+          <label class="fl">ربط بحسابه على نوفينيرا<select id="f_nov"><option value="">مش مربوط (العدد بيتكتب بالإيد)</option>${novOptions(d.noveneraTeacherId)}</select></label>
+          ${!NOV.teachers.length?`<p class="hint">${NOV.err?'مش قادر أوصل لنوفينيرا دلوقتي، جرب تاني بعد شوية.':'بحمّل قائمة المدرسين من نوفينيرا...'}</p>`:''}
+          <label class="fl" id="opriceWrap">سعر طالب الأونلاين بس<input id="f_oprice" type="number" inputmode="decimal" step="any" min="0" value="${d.onlinePrice??''}" placeholder="فاضي = نفس سعر السنتر"></label>
+          <p class="hint" id="novHint">العدد بيتملي لوحده من نوفينيرا: كل الطلبة ناقص المتجمدين، ويوم التجديد بيتثبت رقم الصبح.</p>
+        </div>`:''}
         <label class="fl" id="fixedWrap">المبلغ<input id="f_fixed" type="number" inputmode="decimal" step="any" min="0" value="${d.fixedAmount??''}"></label>
         <div class="calc"><span id="calcLbl">قيمة الدفعة</span><b id="f_total"></b></div>
         <label class="fl"><span id="dueLbl">ميعاد الدفعة الجاية</span><input id="f_due" type="date" value="${d.nextDue||today()}"></label>
@@ -890,6 +969,7 @@ function openClientForm(id, draft){
     const $=s=>root.querySelector(s);
     const collect=()=>({...(item||{}), ...d, name:$('#f_name').value, entity:$('#f_entity').value, phone:$('#f_phone').value.trim(),
       cycle:$('#f_cycle').value, billing:$('#f_billing').value, price:n($('#f_price').value), students:n($('#f_students').value), fixedAmount:n($('#f_fixed').value),
+      ...novFormFields(root, d),
       nextDue:$('#f_due').value||null, note:$('#f_note').value.trim(), active: $('#f_active') ? $('#f_active').checked : (d.active??true),
       extra:{...Object.fromEntries([...root.querySelectorAll('[data-x]')].map(i=>[i.dataset.x, i.value.trim()])), service:$('#f_service').value.trim()},
       repId: $('#f_rep') ? ($('#f_rep').value||null) : (d.repId||null),
@@ -898,7 +978,11 @@ function openClientForm(id, draft){
       commissionMonths: $('#f_rep')?.value && $('#f_ctype').value==='recurring_percent' && $('#f_cmonths').value ? n($('#f_cmonths').value) : null});
     root.querySelectorAll('.kindpick button').forEach(b=>b.onclick=()=>{ const cur=collect(); cur.kind=b.dataset.k; openClientForm(id, cur); root.querySelector('#f_name')?.focus(); });
     const upd=()=>{ const fixed=$('#f_billing').value==='fixed'; $('#perUnit').hidden=fixed; $('#fixedWrap').hidden=!fixed;
-      const amt= fixed ? n($('#f_fixed').value) : n($('#f_price').value)*n($('#f_students').value);
+      const nv=novFormFields(root, d); const linked=!fixed && !!nv.noveneraTeacherId && !!nv.novCounts;
+      if($('#novWrap')){ $('#novWrap').hidden=fixed; $('#opriceWrap').hidden=!nv.noveneraTeacherId; $('#novHint').hidden=!nv.noveneraTeacherId; }
+      $('#f_students').readOnly=linked; if(linked) $('#f_students').value=nv.novCounts.billable;
+      const amt= fixed ? n($('#f_fixed').value) : linked ? cycleAmount({...d, kind:d.kind, billing:'per_student', price:n($('#f_price').value), ...nv})
+        : n($('#f_price').value)*n($('#f_students').value);
       const once=$('#f_cycle').value==='once';
       $('#calcLbl').textContent = once ? 'المبلغ الإجمالي' : $('#f_cycle').value==='weekly' ? 'قيمة الدفعة الأسبوعية' : 'قيمة الدفعة الشهرية';
       $('#dueLbl').textContent = once ? 'ميعاد الدفع' : 'ميعاد الدفعة الجاية';
@@ -915,7 +999,8 @@ function openClientForm(id, draft){
       ev.preventDefault(); if(!required(root)) return;
       const rec=collect(); rec.name=rec.name.trim(); rec.createdAt=item?.createdAt||Date.now(); delete rec.collected;
       if(rec.repId && !n(rec.commissionValue)){ toast('اكتب نسبة أو مبلغ العمولة'); $('#f_cval').focus(); return; }
-      const saved=await save('clients', rec); if(saved) openClient(saved.id);
+      const relink = (item?.noveneraTeacherId||null)!==(rec.noveneraTeacherId||null);
+      const saved=await save('clients', rec); if(saved){ openClient(saved.id); if(relink && rec.noveneraTeacherId){ await syncNovenera(); if(document.querySelector('.scrim')) openClient(saved.id); } }
     };
   });
 }
@@ -1018,6 +1103,7 @@ function openClient(id){
       <div><span>اتحصّل منه لحد دلوقتي</span><b>${money(paid)}</b></div>
       <div><span>${st.owed>0?'المطلوب دلوقتي':perUnit(c)?'عدد ال'+cfg.units:'الخدمة'}</span><b ${st.owed>0?'style="color:var(--bad)"':''}>${st.owed>0?money(st.owed):perUnit(c)?`<span class="num">${n(c.students)}</span>`:esc(ex(c).service||'—')}</b></div>
     </div>
+    ${novLinked(c)?novBox(c):''}
     ${c.repId?`<p class="hint" style="margin-bottom:10px">جابه <b>${esc(repName(c.repId))}</b> · عمولته ${commText(c)}</p>`:''}
     ${c.note?`<p class="hint" style="margin-bottom:12px">${esc(c.note)}</p>`:''}
     <div class="tools">
@@ -1031,6 +1117,7 @@ function openClient(id){
     <div class="acts"><button type="button" class="btn grow" id="editBtn">تعديل البيانات</button><button type="button" class="btn" id="closeBtn">قفل</button></div>`, root=>{
     root.querySelector('#closeBtn').onclick=closeSheet;
     root.querySelector('#editBtn').onclick=()=>openClientForm(id);
+    root.querySelector('#novRefresh')?.addEventListener('click',async()=>{ await syncNovenera(true); if(document.querySelector('.scrim')) openClient(id); });
     root.querySelector('#editBtn2')?.addEventListener('click',()=>openClientForm(id));
     root.querySelector('#payBtn').onclick=()=>openPayment(id);
     root.querySelector('#stmtBtn').onclick=()=>makeDoc(()=>docClientStatement(c), {name:`كشف-حساب-${c.name}`, phone:c.phone,
@@ -1213,6 +1300,7 @@ function docInvoice(pid){
   const periodTxt = c.cycle==='monthly' ? `اشتراك شهر ${monthName(p.date.slice(0,7))}` : c.cycle==='weekly' ? `اشتراك أسبوع ${fdateY(p.date)}` : 'دفعة';
   const fullCycle = cycleAmount(c);
   const matches = perUnit(c) && fullCycle>0 && Math.abs(n(p.amount)-fullCycle)<0.01;
+  const split = matches && hasOnlinePrice(c);
   const qty = matches ? n(c.students) : 1, unit = matches ? n(c.price) : n(p.amount);
   const details=[cfg.label, clientDesc(c)].filter(Boolean).join(' · ');
   return docWrap(key, `${docHead(key,'فاتورة',[['رقم الفاتورة',`<span class="num">${invNo(p,c)}</span>`],['التاريخ',`<span class="num">${fnum(p.date)}</span>`],['الحالة','مدفوعة']])}
@@ -1221,7 +1309,9 @@ function docInvoice(pid){
       <div class="d-box"><div class="lbl">تفاصيل الدفع</div><div class="ln">طريقة الدفع: <b>${esc(p.note||'—')}</b></div><div class="ln">نظام الاشتراك: <b>${CYCLES[c.cycle]}</b></div>${c.cycle!=='once'&&c.nextDue?`<div class="ln">الموعد القادم: <b>${fdateY(c.nextDue)}</b></div>`:''}</div>
     </div>
     <table class="d-table"><thead><tr><th style="width:44%">البيان</th><th>الكمية</th><th class="n">سعر الوحدة</th><th class="n">الإجمالي</th></tr></thead><tbody>
-      <tr><td><b>${esc(svc)}</b><span class="sub">${esc(periodTxt)}</span></td><td><span class="num">${qty}</span>${matches?` ${qty>10||qty<3?cfg.unit:cfg.units}`:''}</td><td class="n">${dm(unit)}</td><td class="n"><b>${dm(n(p.amount))}</b></td></tr>
+      ${split ? [['طلبة السنتر', n(c.novCounts.center_active), n(c.price)], ['طلبة الأونلاين', n(c.novCounts.online_active), onlineRate(c)]].map(([lbl,q,u])=>
+        `<tr><td><b>${esc(svc)}</b><span class="sub">${esc(periodTxt)} · ${lbl}</span></td><td><span class="num">${q}</span> ${q>10||q<3?cfg.unit:cfg.units}</td><td class="n">${dm(u)}</td><td class="n"><b>${dm(q*u)}</b></td></tr>`).join('')
+      : `<tr><td><b>${esc(svc)}</b><span class="sub">${esc(periodTxt)}</span></td><td><span class="num">${qty}</span>${matches?` ${qty>10||qty<3?cfg.unit:cfg.units}`:''}</td><td class="n">${dm(unit)}</td><td class="n"><b>${dm(n(p.amount))}</b></td></tr>`}
     </tbody></table>
     <div class="d-sum">
       <div class="d-words">المبلغ بالحروف:<br><b>فقط ${tafqeet(p.amount)} جنيهاً مصرياً لا غير</b></div>
