@@ -955,10 +955,11 @@ function vTeam(){
       <div class="foot">${x.advOwed>0?`<button type="button" class="btn sm" data-pay="${k}:advance">رد سلفة</button>`:''}<button type="button" class="btn sm" data-pay="${k}:profit">سحب أرباح</button><button type="button" class="btn sm" data-stmt="partner:${k}">${PDF_SVG} كشف حساب</button></div>
     </article>`; }).join('');
   const hist=[...S.payouts].sort(byDate).map(x=>`<div class="row"><button type="button" class="tap" data-open="payout:${x.id}">
-    <div class="main"><div class="t">${PARTNERS[x.partner]||'—'} <span class="chip ${x.kind==='advance'?'':'good'}">${x.kind==='advance'?'رد سلفة':'سحب أرباح'}</span>${poolOf(x)==='pvt'?` ${entChip('pvt')}`:''}</div><div class="s">${fdateY(x.date)}${x.note?' · '+esc(x.note):''}</div></div><div class="amt"><b>${money(x.amount)}</b></div></button></div>`).join('');
+    <div class="main"><div class="t">${PARTNERS[x.partner]||'—'} <span class="chip ${x.kind==='advance'?'':'good'}">${x.kind==='advance'?'رد سلفة':'سحب أرباح'}</span>${poolOf(x)==='pvt'?` ${entChip('pvt')}`:''}</div><div class="s">${fdateY(x.date)}${x.note?' · '+esc(x.note):''}</div></div><div class="amt"><b>${money(x.amount)}</b></div></button><button type="button" class="btn sm dan" data-undo="${x.id}">إلغاء</button></div>`).join('');
   return seg+`<p class="hint">كل شريك حسابه متقسم: السلف لوحدها وبترجع زي ما هي، والأرباح لوحدها. الأرباح بتتحسب بعد ما مصاريف الشركة تتسد.${Object.keys(s.phones||{}).length?'':' ضيف أرقام الشركاء من ⚙️ عشان تبعتلهم كشف الحساب.'}</p>
     ${cards}
     <div class="sec-h"><h2>سجل الصرف للشركاء</h2><small>${S.payouts.length} عملية</small></div>
+    <p class="hint">اتصرف حاجة بالغلط؟ اضغط «إلغاء» جنبها وهترجع للحساب كأنها ما حصلتش. ولو المبلغ أو النوع غلط اضغط عليها وعدّلها.</p>
     <div class="list">${hist||`<div class="empty"><b>مفيش صرف متسجّل</b>من كارت أي شريك اضغط «رد سلفة» أو «سحب أرباح».</div>`}</div>`;
 }
 
@@ -1178,7 +1179,7 @@ function openForm(type, id, preset={}){
       <label class="fl">تفاصيل<input id="f_note" value="${esc(d.note||'')}" placeholder="اختياري"></label>`;
   }
   sheet(`<h3>${title}</h3><form id="frm" novalidate style="margin-top:12px"><div class="fields">${body}</div>
-    <div class="acts" id="acts"><button type="submit" class="btn pri grow">حفظ</button>${item?'<button type="button" class="btn dan" id="delBtn">حذف</button>':''}<button type="button" class="btn" id="cancelBtn">إلغاء</button></div></form>`, root=>{
+    <div class="acts" id="acts"><button type="submit" class="btn pri grow">حفظ</button>${item?`<button type="button" class="btn dan" id="delBtn">${type==='payout'||type==='reppay'?'إلغاء الصرف ده':'حذف'}</button>`:''}<button type="button" class="btn" id="cancelBtn">رجوع</button></div></form>`, root=>{
     const $=s=>root.querySelector(s);
     $('#cancelBtn').onclick = type==='rep'&&item ? ()=>openRep(id) : closeSheet;
     if(item) delFlow(root, col, id, ()=>openForm(type,id), type==='rep'?' العملاء اللي جابهم هيفضلوا، بس من غير عمولة.':'');
@@ -1712,8 +1713,12 @@ let tt; function toast(msg){ clearTimeout(tt); document.querySelector('.toast')?
 /* ================= events ================= */
 document.querySelector('nav.tabs').addEventListener('click',e=>{ const b=e.target.closest('button[data-tab]'); if(!b) return; tab=b.dataset.tab; try{localStorage.setItem('tab',tab);}catch(_){}; render(); window.scrollTo(0,0); });
 document.getElementById('view').addEventListener('click',async e=>{
-  const t=e.target.closest('[data-xfer],[data-xlist],[data-open],[data-period],[data-cseg],[data-kind],[data-eseg],[data-dseg],[data-tseg],[data-pay],[data-reppay],[data-stmt],[data-done]'); if(!t) return;
+  const t=e.target.closest('[data-undo],[data-undo-yes],[data-undo-no],[data-xfer],[data-xlist],[data-open],[data-period],[data-cseg],[data-kind],[data-eseg],[data-dseg],[data-tseg],[data-pay],[data-reppay],[data-stmt],[data-done]'); if(!t) return;
   const ds=t.dataset;
+  if(ds.undo){ const x=S.payouts.find(y=>y.id===ds.undo); if(!x) return; const row=t.closest('.row');
+    row.innerHTML=`<div class="confirm"><span>تلغي ${x.kind==='advance'?'رد السلفة':'سحب الأرباح'} ده (${fmt(x.amount)} ج.م لـ ${PARTNERS[x.partner]})؟</span><button type="button" class="btn sm dan" data-undo-yes="${x.id}">أيوه ألغيه</button><button type="button" class="btn sm" data-undo-no="1">لا</button></div>`; return; }
+  if(ds.undoYes){ await remove('payouts', ds.undoYes); return; }
+  if(ds.undoNo) return render();
   if(ds.xfer) return openForm('transfer',null,{direction:ds.xfer});
   if(ds.xlist) return openTransfers();
   if(ds.open){ const [type,id]=ds.open.split(':'); if(type==='client') openClient(id); else if(type==='sub') openSub(id); else if(type==='task') openTask(id); else if(type==='rep') openRep(id); else openForm(type,id); return; }
