@@ -22,7 +22,7 @@
   --ink:#14211C; --muted:#5E6C66; --accent:#17473E; --accent-2:#2E7D6B; --accent-ink:#FFFFFF;
   --good:#1E7A4C; --good-bg:#DCF1E5; --warn:#94600A; --warn-bg:#FAEED3; --bad:#B23A35; --bad-bg:#F8E0DE;
   --wa:#1FA855; --hero:#17473E; --hero-ink:#FFFFFF;
-  --nov:#4655C4; --cen:#13808A; --nab:#C24A3A;
+  --nov:#4655C4; --cen:#13808A; --nab:#C24A3A; --pvt:#8A5A1E;
   --f:'Alexandria',system-ui,'Segoe UI',Tahoma,sans-serif;
   --r:16px;
 }
@@ -30,12 +30,12 @@
   --bg:#0E1412; --surface:#17201C; --sunk:#111816; --line:#29342F;
   --ink:#E6EEEA; --muted:#93A39C; --accent:#5BB8A4; --accent-2:#5BB8A4; --accent-ink:#0B1714;
   --good:#5FCB92; --good-bg:#15302A; --warn:#E3B04F; --warn-bg:#33291A; --bad:#EE7C74; --bad-bg:#3A1F1E;
-  --wa:#3FD07A; --hero:#1D3B34; --hero-ink:#E6EEEA; --nov:#8E9BF0; --cen:#4FC3CC; --nab:#F08A78; color-scheme:dark}}
+  --wa:#3FD07A; --hero:#1D3B34; --hero-ink:#E6EEEA; --nov:#8E9BF0; --cen:#4FC3CC; --nab:#F08A78; --pvt:#D9A55E; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0E1412; --surface:#17201C; --sunk:#111816; --line:#29342F;
   --ink:#E6EEEA; --muted:#93A39C; --accent:#5BB8A4; --accent-2:#5BB8A4; --accent-ink:#0B1714;
   --good:#5FCB92; --good-bg:#15302A; --warn:#E3B04F; --warn-bg:#33291A; --bad:#EE7C74; --bad-bg:#3A1F1E;
-  --wa:#3FD07A; --hero:#1D3B34; --hero-ink:#E6EEEA; --nov:#8E9BF0; --cen:#4FC3CC; --nab:#F08A78; color-scheme:dark}
+  --wa:#3FD07A; --hero:#1D3B34; --hero-ink:#E6EEEA; --nov:#8E9BF0; --cen:#4FC3CC; --nab:#F08A78; --pvt:#D9A55E; color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg);direction:rtl;margin:0}
@@ -118,6 +118,26 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .check.on{background:var(--accent-2);border-color:var(--accent-2);color:#fff}
 .check svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:3}
 
+.ch{padding:14px 16px 8px}
+.ch h2{margin:0;font-size:16px;font-weight:600}
+.ch p{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.wl{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:10px 16px;border-top:1px solid var(--line);font-size:14px}
+.wl>span{min-width:0}
+.wl>span small{display:block;color:var(--muted);font-size:11.5px}
+.wl b{font-weight:600;white-space:nowrap}
+.wl.sub>span{padding-inline-start:14px;color:var(--muted)}
+.wl.tot{background:var(--sunk);font-weight:700}
+.wl.tot b{font-size:16px}
+.wl.neg b{color:var(--bad)}
+.wl.pos b{color:var(--good)}
+.note{padding:10px 16px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);line-height:1.7}
+.note.bad{background:var(--bad-bg);color:var(--bad)}
+.note.good{background:var(--good-bg);color:var(--good)}
+.pblk{border-top:1px solid var(--line)}
+.pblk .lbl{padding:10px 16px 0;font-size:12.5px;font-weight:600;display:flex;justify-content:space-between;gap:8px}
+.pblk .lbl small{font-weight:400;color:var(--muted)}
+.cells.c3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.pblk .cells{margin-top:8px;border-top:1px solid var(--line)}
 .empty{padding:24px 18px;text-align:center;color:var(--muted);font-size:13.5px}
 .empty b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px;font-weight:600}
 .alert{border-radius:12px;padding:10px 14px;font-size:13px;background:var(--warn-bg);color:var(--warn)}
@@ -256,6 +276,7 @@ label.cb input{width:20px;height:20px;accent-color:var(--accent-2)}
 .d-note{margin-top:18px;font-size:12px;color:#4C5753;border-right:3px solid var(--brand);padding-right:12px}
 .d-foot{position:absolute;left:56px;right:56px;bottom:34px;border-top:2px solid #E6EAE8;padding-top:12px;display:flex;justify-content:space-between;gap:16px;font-size:11px;color:#7A8581}
 .d-foot b{color:var(--brand);font-weight:600}
+.d-sec{margin:18px 0 8px;font-size:14px;font-weight:700;color:var(--brand)}
 .d-cont{font-size:11.5px;color:#7A8581;margin:0 0 12px}
 </style>
 </head>
@@ -313,6 +334,11 @@ const ENTS = {
   nab:{name:'نبض',     c:'var(--nab)', hex:'#C24A3A', code:'NAB', split:{fathy:.30, sory:.30, adel:.10, arafa:.10, company:.20}},
 };
 const EKEYS = Object.keys(ENTS);
+/* the three teachers from before the company belong to Fathy & Adel only — kept completely outside the company books */
+const PVT = {name:'الحساب الخاص', full:'الحساب الخاص · فتحي وعادل', c:'var(--pvt)', hex:'#8A5A1E'};
+const PVT_PARTNERS = ['fathy','adel'];
+const entName = k => k==='pvt' ? PVT.name : ENTS[k]?.name || 'عام';
+const bkey = e => ENTS[e] ? e : 'nov';   // invoices for the private teachers carry Novenera's name
 const GROUP_HEX = '#17473E';
 const ICONS = {
   teacher:'<svg viewBox="0 0 24 24"><path d="M3 9.5 12 5l9 4.5-9 4.5z"/><path d="M7 11.5V16c1.4 1.4 3 2 5 2s3.6-.6 5-2v-4.5M21 9.5V15"/></svg>',
@@ -536,7 +562,7 @@ function relDay(d){
   if(d<0) return `متأخر ${-d} ${-d<=10?'أيام':'يوم'}`; if(d===2) return 'بعد يومين';
   return `بعد ${d} ${d<=10?'أيام':'يوم'}`;
 }
-const entChip = k => ENTS[k] ? `<span class="chip e" style="--c:${ENTS[k].c}">${ENTS[k].name}</span>` : `<span class="chip">عام</span>`;
+const entChip = k => k==='pvt' ? `<span class="chip e" style="--c:var(--pvt)">${PVT.name}</span>` : ENTS[k] ? `<span class="chip e" style="--c:${ENTS[k].c}">${ENTS[k].name}</span>` : `<span class="chip">عام</span>`;
 const byDate = (a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||0)-(a.createdAt||0);
 const byDateAsc = (a,b) => (a.date||'').localeCompare(b.date||'') || (a.createdAt||0)-(b.createdAt||0);
 function settings(){
@@ -632,7 +658,7 @@ function clientState(c){
 }
 /* sales commissions come out of the company's 20% */
 function clientCommissions(c){
-  if(!c.repId || !c.commissionType || !n(c.commissionValue)) return [];
+  if(c.entity==='pvt' || !c.repId || !c.commissionType || !n(c.commissionValue)) return [];
   const pays = S.payments.filter(p=>p.clientId===c.id).sort(byDateAsc);
   if(!pays.length) return [];
   const v = n(c.commissionValue), base = {clientId:c.id, repId:c.repId, entity:c.entity, client:c.name};
@@ -656,24 +682,63 @@ function periodRange(p=period){
   return null;
 }
 const inRange = (s,r) => !r || (!!s && s>=r[0] && s<=r[1]);
-function compute(range){
-  const ent={}; EKEYS.forEach(k=>ent[k]={rev:0, pay:0, other:0, comm:0});
-  const cmap = Object.fromEntries(S.clients.map(c=>[c.id,c]));
-  S.payments.forEach(p=>{ if(!inRange(p.date,range)) return; const c=cmap[p.clientId]; if(c && ent[c.entity]) ent[c.entity].pay+=n(p.amount); });
-  S.incomes.forEach(i=>{ if(!inRange(i.date,range)) return; if(ent[i.entity]) ent[i.entity].other+=n(i.amount); });
-  const comms = allCommissions().filter(x=>inRange(x.date,range));
-  comms.forEach(x=>{ if(ent[x.entity]) ent[x.entity].comm+=x.amount; });
-  EKEYS.forEach(k=>ent[k].rev=ent[k].pay+ent[k].other);
-  const p={}; PKEYS.forEach(k=>p[k]={earned:0, byEnt:{}, owed:0, withdrawn:0});
-  let companyGross=0;
-  EKEYS.forEach(k=>{ const sp=ENTS[k].split, r=ent[k].rev; PKEYS.forEach(pk=>{ const v=r*(sp[pk]||0); p[pk].earned+=v; p[pk].byEnt[k]=v; }); companyGross+=r*sp.company; });
-  const expTotal = S.expenses.filter(e=>inRange(e.date,range)).reduce((a,e)=>a+n(e.amount),0);
-  const commTotal = comms.reduce((a,x)=>a+x.amount,0);
-  S.expenses.forEach(e=>{ if(e.paidBy!=='company' && !e.settled && p[e.paidBy]) p[e.paidBy].owed+=n(e.amount); });
-  S.payouts.forEach(x=>{ if(p[x.partner]) p[x.partner].withdrawn+=n(x.amount); });
-  PKEYS.forEach(k=>p[k].balance=p[k].earned+p[k].owed-p[k].withdrawn);
-  const revTotal = EKEYS.reduce((a,k)=>a+ent[k].rev,0);
-  return {ent,p,companyGross,expTotal,commTotal,companyNet:companyGross-expTotal-commTotal,revTotal};
+/* ================= the books =================
+   Order of money: 1) income comes in  2) costs are paid first  3) only what's left is profit and gets split.
+   Partners' money is kept in three separate drawers: advances (paid from their pocket, returned as-is),
+   company profit, and the private pool (Fathy & Adel's old teachers). */
+function pvtSplit(){ const s=settings().pvtSplit||{}; return {fathy:n(s.fathy??40)/100, adel:n(s.adel??40)/100, reserve:n(s.reserve??20)/100}; }
+const poolOfEnt = e => e==='pvt' ? 'pvt' : 'company';
+const poolOf = x => x.pool==='pvt' ? 'pvt' : 'company';
+function books(){
+  const cmap=Object.fromEntries(S.clients.map(c=>[c.id,c]));
+  const K=[...EKEYS,'pvt'], rev=Object.fromEntries(K.map(k=>[k,0])), cost=Object.fromEntries(K.map(k=>[k,0]));
+  let general=0;
+  S.payments.forEach(p=>{ const c=cmap[p.clientId]; if(c && rev[c.entity]!==undefined) rev[c.entity]+=n(p.amount); });
+  S.incomes.forEach(i=>{ if(rev[i.entity]!==undefined) rev[i.entity]+=n(i.amount); });
+  S.expenses.forEach(e=>{ if(e.entity==='pvt') cost.pvt+=n(e.amount); else if(ENTS[e.entity]) cost[e.entity]+=n(e.amount); else general+=n(e.amount); });
+  const revC=EKEYS.reduce((a,k)=>a+rev[k],0);
+  const ent={};
+  EKEYS.forEach(k=>{ const g=general*(revC>0?rev[k]/revC:1/EKEYS.length); ent[k]={rev:rev[k], own:cost[k], gen:g, cost:cost[k]+g, net:rev[k]-cost[k]-g}; });
+  const costC=EKEYS.reduce((a,k)=>a+ent[k].cost,0), N=revC-costC;
+  // a losing brand is covered by the others before anyone gets profit
+  const pos=EKEYS.reduce((a,k)=>a+Math.max(0,ent[k].net),0), kf=N>0&&pos>0?N/pos:0;
+  EKEYS.forEach(k=>ent[k].dist=Math.max(0,ent[k].net)*kf);
+  const commTotal=allCommissions().reduce((a,x)=>a+x.amount,0);
+  const repPaid=S.rep_payouts.reduce((a,x)=>a+n(x.amount),0);
+  const reserveGross=EKEYS.reduce((a,k)=>a+ent[k].dist*ENTS[k].split.company,0);
+  const ps=pvtSplit(), Np=rev.pvt-cost.pvt, distP=Math.max(0,Np);
+  const p={};
+  PKEYS.forEach(k=>{
+    const byEnt=Object.fromEntries(EKEYS.map(e=>[e, ent[e].dist*(ENTS[e].split[k]||0)]));
+    const inPvt=PVT_PARTNERS.includes(k);
+    const earnedC=EKEYS.reduce((a,e)=>a+byEnt[e],0), earnedP=inPvt?distP*(ps[k]||0):0;
+    const adv={company:0,pvt:0}, advRet={company:0,pvt:0}, took={company:0,pvt:0};
+    S.expenses.forEach(e=>{ if(e.paidBy===k) adv[poolOfEnt(e.entity)]+=n(e.amount); });
+    S.payouts.forEach(x=>{ if(x.partner!==k) return; (x.kind==='advance'?advRet:took)[poolOf(x)]+=n(x.amount); });
+    const advPaid=adv.company+adv.pvt, advBack=advRet.company+advRet.pvt;
+    p[k]={byEnt, inPvt, earnedC, earnedP, adv, advRet, took, advPaid, advBack, advOwed:advPaid-advBack,
+      profitC:earnedC-took.company, profitP:earnedP-took.pvt};
+    p[k].total=p[k].advOwed+p[k].profitC+(inPvt?p[k].profitP:0);
+  });
+  const paidByPool = pool => S.expenses.filter(e=>e.paidBy==='company' && poolOfEnt(e.entity)===pool).reduce((a,e)=>a+n(e.amount),0);
+  const outPool = pool => S.payouts.filter(x=>poolOf(x)===pool).reduce((a,x)=>a+n(x.amount),0);
+  const sumP = f => PKEYS.reduce((a,k)=>a+f(p[k]),0);
+  const company={rev:revC, cost:costC, general, net:N, deficit:N<0?-N:0, reserveGross, commTotal, repPaid,
+    reserve:reserveGross-commTotal, repOwed:commTotal-repPaid,
+    cash:revC-paidByPool('company')-outPool('company')-repPaid,
+    advOwed:sumP(x=>x.adv.company-x.advRet.company), profitOwed:sumP(x=>x.profitC),
+    partnersEarned:sumP(x=>x.earnedC)};
+  const pv={rev:rev.pvt, cost:cost.pvt, net:Np, deficit:Np<0?-Np:0, dist:distP, split:ps, reserve:distP*ps.reserve,
+    cash:rev.pvt-paidByPool('pvt')-outPool('pvt'),
+    advOwed:sumP(x=>x.adv.pvt-x.advRet.pvt), profitOwed:sumP(x=>x.inPvt?x.profitP:0)};
+  return {ent, company, pv, p};
+}
+function flow(range){
+  const cmap=Object.fromEntries(S.clients.map(c=>[c.id,c])); const f={rc:0,rp:0,ec:0,ep:0};
+  S.payments.forEach(p=>{ if(!inRange(p.date,range)) return; const c=cmap[p.clientId]; if(!c) return; if(c.entity==='pvt') f.rp+=n(p.amount); else f.rc+=n(p.amount); });
+  S.incomes.forEach(i=>{ if(!inRange(i.date,range)) return; if(i.entity==='pvt') f.rp+=n(i.amount); else f.rc+=n(i.amount); });
+  S.expenses.forEach(e=>{ if(!inRange(e.date,range)) return; if(e.entity==='pvt') f.ep+=n(e.amount); else f.ec+=n(e.amount); });
+  return f;
 }
 function repSummary(id, range){
   const comms = allCommissions().filter(x=>x.repId===id);
@@ -693,7 +758,7 @@ function attention(){
 /* ================= message text ================= */
 function clientVars(c, extra={}){
   const st = clientState(c);
-  return {'الاسم':c.name, 'الكيان':brand(c.entity).name, 'الخدمة':ex(c).service||'', 'التاريخ':fdateY(c.nextDue),
+  return {'الاسم':c.name, 'الكيان':brand(bkey(c.entity)).name, 'الخدمة':ex(c).service||'', 'التاريخ':fdateY(c.nextDue),
     'الفترة': c.cycle==='weekly'?'الأسبوعي':c.cycle==='monthly'?'الشهري':'',
     'المبلغ': fmt(st.k==='late'?st.owed:cycleAmount(c)), 'أيام_التأخير': st.d<0?String(-st.d):'', ...extra};
 }
@@ -727,37 +792,64 @@ function attentionRow(it){
 }
 
 function vHome(){
-  const range = periodRange(), m = compute(range);
-  const lateTotal = S.clients.reduce((a,c)=>{ const st=clientState(c); return a+(st.k==='late'?st.owed:0); },0);
-  const att = attention();
-  const ents = EKEYS.map(k=>{
-    const e=m.ent[k], sp=ENTS[k].split;
-    const order = Object.entries(sp).filter(([x])=>x!=='company').sort((a,b)=>b[1]-a[1]);
-    return `<article class="card" style="--c:${ENTS[k].c}">
-      <div class="ent-h"><i></i><div><h3>${ENTS[k].name}</h3><small>الدخل <b>${money(e.rev)}</b></small></div></div>
-      <div class="cells">
-        ${order.map(([pk,v])=>`<div><span>${PARTNERS[pk]} <em>${v*100}%</em></span><b>${money(e.rev*v)}</b></div>`).join('')}
-        <div class="co"><span>حصة الشركة <em>20%</em></span><b>${money(e.rev*sp.company)}</b></div>
-        <div class="co"><span>عمولات السيلز <em>من حصة الشركة</em></span><b>${money(e.comm)}</b></div>
-      </div></article>`;
-  }).join('');
+  const B=books(), C=B.company, P=B.pv, att=attention();
+  const lateTotal=S.clients.reduce((a,c)=>{ const st=clientState(c); return a+(st.k==='late'?st.owed:0); },0);
+  const mf=flow(periodRange('month')), mName=AR_MONTHS[new Date().getMonth()];
+  const wl=(l,v,cls='',sub='')=>`<div class="wl ${cls}"><span>${l}${sub?`<small>${sub}</small>`:''}</span><b>${money(v)}</b></div>`;
+  const ents=EKEYS.filter(k=>B.ent[k].rev||B.ent[k].cost).map(k=>{ const e=B.ent[k];
+    return wl(`${ENTS[k].name}`, e.net, e.net<0?'neg':'', `دخل ${fmt(e.rev)} − مصروفات ${fmt(e.own)}${e.gen?` − نصيبها من المصروفات العامة ${fmt(e.gen)}`:''}`); }).join('');
+  const hasReps=S.reps.length>0||C.commTotal>0;
+  const pvtActive=S.clients.some(c=>c.entity==='pvt')||P.rev||P.cost;
   return `
-    <div class="seg" role="group" aria-label="الفترة">
-      ${[['month','الشهر ده'],['last','الشهر اللي فات'],['all','من الأول']].map(([k,l])=>`<button type="button" data-period="${k}" aria-pressed="${period===k}">${l}</button>`).join('')}
-    </div>
     <section class="hero">
-      <div><div class="lbl">اللي اتحصّل ${period==='all'?'من الأول':period==='month'?'في '+AR_MONTHS[new Date().getMonth()]:'الشهر اللي فات'}</div><div class="big">${money(m.revTotal)}</div></div>
+      <div><div class="lbl">فلوس الشركة دلوقتي</div><div class="big">${money(C.cash)}</div></div>
       <div class="trio">
-        <div><span>رصيد الشركة</span><b>${money(m.companyNet)}</b></div>
-        <div><span>مصروفات وعمولات</span><b>${money(m.expTotal+m.commTotal)}</b></div>
-        <div><span>متأخرات</span><b>${money(lateTotal)}</b></div>
+        <div><span>${C.net<0?'عجز من الأول':'صافي الربح من الأول'}</span><b>${money(Math.abs(C.net))}</b></div>
+        <div><span>دخل ${mName}</span><b>${money(mf.rc)}</b></div>
+        <div><span>متأخرات عند العملاء</span><b>${money(lateTotal)}</b></div>
       </div>
     </section>
-    ${m.companyNet<0?`<div class="alert">المصروفات والعمولات في الفترة دي أكبر من حصة الشركة بـ ${money(-m.companyNet)}.</div>`:''}
+
+    <article class="card">
+      <div class="ch"><h2>حساب الشركة من الأول</h2><p>الأول المصاريف بتتسد، واللي يفضل هو الربح اللي بيتقسم.</p></div>
+      ${wl('الدخل', C.rev, '', 'كل اللي اتحصّل من عملاء الشركة')}
+      ${wl('− المصروفات', C.cost, '', 'اشتراكات وأدوات وأي مصروف، سواء دفعته الشركة أو شريك من جيبه')}
+      ${wl(C.net<0?'= عجز':'= صافي الربح', C.net, C.net<0?'tot neg':'tot pos')}
+      ${C.net<=0 ? `<div class="note bad">لسه مفيش أرباح تتقسم. الشركة محتاجة دخل ${money(C.deficit)} كمان عشان تغطي مصاريفها، وبعدها الأرباح تبدأ تتوزع.</div>`
+        : `${PKEYS.map(k=>wl(PARTNERS[k], B.p[k].earnedC, 'sub')).join('')}
+           ${wl('احتياطي الشركة (20%)', C.reserveGross, 'sub')}
+           ${C.commTotal?wl('− منه عمولات السيلز', C.commTotal, 'sub'):''}`}
+    </article>
+
+    <article class="card">
+      <div class="ch"><h2>فلوس الشركة دي بتاعة مين؟</h2><p>الدخل ناقص كل اللي اتصرف = ${money(C.cash)}، ومتقسمة كده:</p></div>
+      ${wl('سلف لازم ترجع للشركاء', C.advOwed, '', 'فلوس دفعوها من جيبهم للشركة')}
+      ${wl('أرباح الشركاء اللي لسه ما اتسحبتش', C.profitOwed, C.profitOwed<0?'neg':'', C.profitOwed<0?'سحبوا أكتر من نصيبهم':'')}
+      ${hasReps?wl('عمولات السيلز اللي لسه ما اتصرفتش', C.repOwed):''}
+      ${wl('احتياطي الشركة', C.reserve, C.reserve<0?'neg':'')}
+      ${C.deficit?wl('− العجز', -C.deficit, 'neg', 'المصروفات لسه أكبر من الدخل'):''}
+      ${wl('= فلوس الشركة', C.cash, 'tot'+(C.cash<0?' neg':''))}
+      ${C.cash<0?`<div class="note bad">الشركة صرفت أكتر من اللي دخلها بـ ${money(-C.cash)}. الفرق ده اتدفع من فلوس تانية${pvtActive?' (غالباً من الحساب الخاص)':''}، فهو دين على الشركة.</div>`:''}
+    </article>
+
     <div class="sec-h"><h2>محتاج تتابعه</h2><small>${att.length? att.length+' حاجة':''}</small></div>
     <div class="list">${att.slice(0,8).map(attentionRow).join('') || `<div class="empty"><b>كله تمام 👌</b>مفيش دفعات متأخرة ولا تجديدات أو مهام قريبة.</div>`}</div>
-    <div class="sec-h"><h2>توزيع الأرباح</h2><small>على اللي اتحصّل فعلاً</small></div>
-    ${ents}`;
+
+    ${pvtActive?`<article class="card" style="--c:var(--pvt)">
+      <div class="ent-h"><i></i><div><h3>${PVT.full}</h3><small>المدرسين القدام · برا حسابات الشركة خالص</small></div></div>
+      ${wl('الدخل', P.rev)}${wl('− المصروفات', P.cost)}
+      ${wl(P.net<0?'= عجز':'= صافي الربح', P.net, P.net<0?'tot neg':'tot pos')}
+      ${P.net>0?`${wl(`فتحي (${fmt(P.split.fathy*100)}%)`, P.dist*P.split.fathy,'sub')}${wl(`عادل (${fmt(P.split.adel*100)}%)`, P.dist*P.split.adel,'sub')}${P.split.reserve?wl(`احتياطي (${fmt(P.split.reserve*100)}%)`, P.reserve,'sub'):''}`:''}
+      ${wl('الفلوس اللي في الحساب ده دلوقتي', P.cash, P.cash<0?'neg':'')}
+    </article>`:''}
+
+    <article class="card">
+      <div class="ch"><h2>شهر ${mName}</h2><p>الدخل والمصروفات اللي اتسجلت الشهر ده بس</p></div>
+      ${wl('دخل الشركة', mf.rc)}${wl('مصروفات الشركة', mf.ec)}${wl('الصافي', mf.rc-mf.ec, 'tot'+(mf.rc-mf.ec<0?' neg':''))}
+      ${pvtActive?wl('دخل الحساب الخاص', mf.rp, 'sub'):''}
+    </article>
+
+    ${ents?`<article class="card"><div class="ch"><h2>كل كيان لوحده</h2><p>صافي كل كيان من الأول بعد مصروفاته</p></div>${ents}</article>`:''}`;
 }
 
 function vClients(){
@@ -784,21 +876,21 @@ function vClients(){
 }
 
 function vExp(){
-  const seg = `<div class="seg" role="group">${[['all','الكل'],['adv','سلف مفتوحة'],['company','من الشركة']].map(([k,l])=>`<button type="button" data-eseg="${k}" aria-pressed="${expSeg===k}">${l}</button>`).join('')}</div>`;
+  const seg = `<div class="seg" role="group">${[['all','الكل'],['adv','دفعها شريك'],['company','من خزنة الشركة']].map(([k,l])=>`<button type="button" data-eseg="${k}" aria-pressed="${expSeg===k}">${l}</button>`).join('')}</div>`;
   let list=[...S.expenses].sort(byDate);
-  if(expSeg==='adv') list=list.filter(e=>e.paidBy!=='company'&&!e.settled);
+  if(expSeg==='adv') list=list.filter(e=>e.paidBy!=='company');
   if(expSeg==='company') list=list.filter(e=>e.paidBy==='company');
   const total=list.reduce((a,e)=>a+n(e.amount),0);
   const rows=list.map(e=>{
     const adv=e.paidBy!=='company';
-    const tag = adv ? (e.settled?`<span class="chip good">سلفة ${PARTNERS[e.paidBy]} · اتسددت</span>`:`<span class="chip warn">سلفة لـ ${PARTNERS[e.paidBy]}</span>`) : '';
+    const tag = adv ? `<span class="chip warn">دفعها ${PARTNERS[e.paidBy]} من جيبه · سلفة</span>` : '';
     return `<div class="row"><button type="button" class="tap" data-open="expense:${e.id}">
       <div class="main"><div class="t">${esc(e.desc)} ${entChip(e.entity)}</div><div class="s">${esc(e.cat||'')} · ${fdateY(e.date)}</div>${tag?`<div style="margin-top:4px">${tag}</div>`:''}</div>
       <div class="amt"><b>${money(e.amount)}</b></div></button></div>`;
   }).join('');
   return seg+`<div class="sec-h"><h2>${list.length} بند</h2><small>الإجمالي ${money(total)}</small></div>
-    <div class="list">${rows||`<div class="empty"><b>${expSeg==='adv'?'مفيش سلف مفتوحة':'مفيش مصروفات'}</b>${expSeg==='adv'?'كل اللي دفعه الشركاء من جيبهم اتسدد.':'المصروفات المتكررة زي ميتا و n8n ضيفها في «المواعيد ← التجديدات».'}</div>`}</div>
-    <p class="hint">المصروفات وعمولات السيلز بتتخصم من حصة الشركة (20%)، ونصيب الشركاء ما بيتأثرش.</p>`;
+    <div class="list">${rows||`<div class="empty"><b>${expSeg==='adv'?'مفيش مصروفات دفعها شريك':'مفيش مصروفات'}</b>${expSeg==='adv'?'لما شريك يدفع حاجة من جيبه، اختار اسمه في «مين دفع».':'المصروفات المتكررة زي ميتا و n8n ضيفها في «المواعيد ← التجديدات».'}</div>`}</div>
+    <p class="hint">المصروفات بتتخصم من الدخل الأول، واللي يفضل هو الربح اللي بيتقسم. أي مصروف دفعه شريك من جيبه بيتسجل سلفة ليه، وبترجعله من «الفريق ← رد سلفة».</p>`;
 }
 
 function vDates(){
@@ -842,20 +934,26 @@ function vTeam(){
     return seg+`<p class="hint">عمولة السيلز بتتحسب لوحدها من دفعات العملاء اللي جابهم، وبتتخصم من حصة الشركة. عمولات الشهر ده: ${money(commMonth)}</p>
       ${cards||`<div class="list"><div class="empty"><b>مفيش سيلز لسه</b>اضغط «+ سيلز» وضيف اسمه ورقمه، وبعدين من بيانات أي عميل اختار مين جابه ونسبته.</div></div>`}`;
   }
-  const m=compute(null), s=settings();
-  const cards=PKEYS.map(k=>{ const x=m.p[k];
-    const parts=EKEYS.filter(e=>x.byEnt[e]>0).map(e=>`<div><span>من ${ENTS[e].name}</span><b>${money(x.byEnt[e])}</b></div>`).join('');
+  const B=books(), s=settings(), C=B.company;
+  const cell=(l,v,cls='')=>`<div><span>${l}</span><b ${cls}>${money(v)}</b></div>`;
+  const cards=PKEYS.map(k=>{ const x=B.p[k];
+    const shares=EKEYS.filter(e=>ENTS[e].split[k]).map(e=>`${ENTS[e].name} ${ENTS[e].split[k]*100}%`).join(' · ');
     return `<article class="card pcard">
-      <div class="head"><h3>${PARTNERS[k]}</h3><div class="bal"><small>رصيده المستحق</small><b style="color:${x.balance<0?'var(--bad)':'var(--ink)'}">${money(x.balance)}</b></div></div>
-      <div class="cells">${parts||`<div><span>أرباح</span><b>${money(0)}</b></div>`}<div><span>سلف ليه</span><b>${money(x.owed)}</b></div><div><span>اتصرف له</span><b>${money(x.withdrawn)}</b></div></div>
-      <div class="foot"><button type="button" class="btn sm" data-pay="${k}">تسجيل صرف</button><button type="button" class="btn sm" data-stmt="partner:${k}">${PDF_SVG} كشف حساب</button></div>
+      <div class="head"><div><h3>${PARTNERS[k]}</h3><small>${shares}</small></div><div class="bal"><small>المستحق له كله</small><b style="color:${x.total<0?'var(--bad)':'var(--ink)'}">${money(x.total)}</b></div></div>
+      <div class="pblk"><div class="lbl">1. السلف <small>فلوس دفعها من جيبه وبترجعله زي ما هي</small></div>
+        <div class="cells c3">${cell('دفع',x.advPaid)}${cell('اترد له',x.advBack)}${cell('باقي له',x.advOwed, x.advOwed<0?'style="color:var(--bad)"':'')}</div></div>
+      <div class="pblk"><div class="lbl">2. أرباح الشركة <small>${C.net<=0?'لسه مفيش أرباح · الشركة في عجز':'نصيبه من صافي الربح'}</small></div>
+        <div class="cells c3">${cell('نصيبه',x.earnedC)}${cell('سحب',x.took.company)}${cell(x.profitC<0?'سحب زيادة':'باقي له',Math.abs(x.profitC), x.profitC<0?'style="color:var(--bad)"':'')}</div></div>
+      ${x.inPvt?`<div class="pblk"><div class="lbl">3. ${PVT.name} <small>المدرسين القدام</small></div>
+        <div class="cells c3">${cell('نصيبه',x.earnedP)}${cell('سحب',x.took.pvt)}${cell(x.profitP<0?'سحب زيادة':'باقي له',Math.abs(x.profitP), x.profitP<0?'style="color:var(--bad)"':'')}</div></div>`:''}
+      <div class="foot">${x.advOwed>0?`<button type="button" class="btn sm" data-pay="${k}:advance">رد سلفة</button>`:''}<button type="button" class="btn sm" data-pay="${k}:profit">سحب أرباح</button><button type="button" class="btn sm" data-stmt="partner:${k}">${PDF_SVG} كشف حساب</button></div>
     </article>`; }).join('');
   const hist=[...S.payouts].sort(byDate).map(x=>`<div class="row"><button type="button" class="tap" data-open="payout:${x.id}">
-    <div class="main"><div class="t">${PARTNERS[x.partner]||'—'}</div><div class="s">${fdateY(x.date)}${x.note?' · '+esc(x.note):''}</div></div><div class="amt"><b>${money(x.amount)}</b></div></button></div>`).join('');
-  return seg+`<p class="hint">الرصيد = نصيبه من الأرباح من الأول + السلف اللي ليه − اللي اتصرف له.${Object.keys(s.phones||{}).length?'':' ضيف أرقام الشركاء من ⚙️ عشان تبعتلهم كشف الحساب.'}</p>
+    <div class="main"><div class="t">${PARTNERS[x.partner]||'—'} <span class="chip ${x.kind==='advance'?'':'good'}">${x.kind==='advance'?'رد سلفة':'سحب أرباح'}</span>${poolOf(x)==='pvt'?` ${entChip('pvt')}`:''}</div><div class="s">${fdateY(x.date)}${x.note?' · '+esc(x.note):''}</div></div><div class="amt"><b>${money(x.amount)}</b></div></button></div>`).join('');
+  return seg+`<p class="hint">كل شريك حسابه متقسم: السلف لوحدها وبترجع زي ما هي، والأرباح لوحدها. الأرباح بتتحسب بعد ما مصاريف الشركة تتسد.${Object.keys(s.phones||{}).length?'':' ضيف أرقام الشركاء من ⚙️ عشان تبعتلهم كشف الحساب.'}</p>
     ${cards}
-    <div class="sec-h"><h2>سجل الصرف</h2><small>${S.payouts.length} عملية</small></div>
-    <div class="list">${hist||`<div class="empty"><b>مفيش صرف متسجّل</b>لما تدّي شريك جزء من أرباحه اضغط «تسجيل صرف» تحت اسمه.</div>`}</div>`;
+    <div class="sec-h"><h2>سجل الصرف للشركاء</h2><small>${S.payouts.length} عملية</small></div>
+    <div class="list">${hist||`<div class="empty"><b>مفيش صرف متسجّل</b>من كارت أي شريك اضغط «رد سلفة» أو «سحب أرباح».</div>`}</div>`;
 }
 
 const FAB = {
@@ -863,7 +961,7 @@ const FAB = {
   clients:['عميل',()=>cliSeg==='other'?openForm('income'):openClientForm()],
   exp:['مصروف',()=>openForm('expense')],
   dates:['',()=>dateSeg==='subs'?openForm('sub'):openForm('task')],
-  team:['',()=>teamSeg==='reps'?openForm('rep'):openForm('payout')],
+  team:['',()=>teamSeg==='reps'?openForm('rep'):openForm('payout',null,{kind:'profit'})],
 };
 function render(){
   const v=document.getElementById('view');
@@ -882,7 +980,8 @@ function render(){
 /* ================= sheets ================= */
 const opt=(map,sel)=>Object.entries(map).map(([k,v])=>`<option value="${esc(k)}"${String(k)===String(sel??'')?' selected':''}>${esc(v)}</option>`).join('');
 const entMap=Object.fromEntries(EKEYS.map(k=>[k,ENTS[k].name]));
-const entMapG={general:'عام (كل الكيانات)',...entMap};
+const entMapG={general:'عام (كل كيانات الشركة)',...entMap, pvt:PVT.full};
+const entMapC={...entMap, pvt:PVT.full};
 const payerMap={company:'خزنة الشركة',...PARTNERS};
 function sheet(html, onMount){
   const root=document.getElementById('sheetRoot');
@@ -935,7 +1034,7 @@ function openClientForm(id, draft){
       <div class="kindpick" role="group" aria-label="نوع العميل">${Object.entries(KIND_CFG).map(([k,v])=>`<button type="button" data-k="${k}" aria-pressed="${d.kind===k}">${ICONS[k]}${v.label}</button>`).join('')}</div>
       <label class="fl">الاسم<input id="f_name" required value="${esc(d.name||'')}" placeholder="${esc(cfg.namePh)}"></label>
       <div class="f2">${cfg.fields.map(kindField).join('')}</div>
-      <div class="f2"><label class="fl">الكيان<select id="f_entity">${opt(entMap,d.entity||'nov')}</select></label>
+      <div class="f2"><label class="fl">الكيان<select id="f_entity">${opt(entMapC,d.entity||'nov')}</select></label>
       <label class="fl">رقم الموبايل (واتساب)<input id="f_phone" type="tel" inputmode="tel" dir="ltr" style="text-align:right" value="${esc(d.phone||'')}" placeholder="01xxxxxxxxx"></label></div>
       <label class="fl">الخدمة / السيستم<input id="f_service" list="svcList" value="${esc(e.service||'')}" placeholder="مثلاً: منصة تعليمية"><datalist id="svcList">${services.map(s=>`<option value="${esc(s)}">`).join('')}</datalist></label>
       <div class="group"><p class="gh">الدفع</p>
@@ -953,7 +1052,7 @@ function openClientForm(id, draft){
         <div class="calc"><span id="calcLbl">قيمة الدفعة</span><b id="f_total"></b></div>
         <label class="fl"><span id="dueLbl">ميعاد الدفعة الجاية</span><input id="f_due" type="date" value="${d.nextDue||today()}"></label>
       </div>
-      <div class="group"><p class="gh">السيلز <small>مين جاب العميل ده؟</small></p>
+      <div class="group" id="repGroup"><p class="gh">السيلز <small>مين جاب العميل ده؟</small></p>
         ${S.reps.length?`<label class="fl">السيلز<select id="f_rep"><option value="">مفيش (جه مباشر)</option>${opt(Object.fromEntries(reps.map(r=>[r.id,r.name])), d.repId)}</select></label>
         <div id="commWrap" class="fields">
           <label class="fl">طريقة العمولة<select id="f_ctype">${opt(COMM_TYPES,d.commissionType||'recurring_percent')}</select></label>
@@ -972,8 +1071,8 @@ function openClientForm(id, draft){
       ...novFormFields(root, d),
       nextDue:$('#f_due').value||null, note:$('#f_note').value.trim(), active: $('#f_active') ? $('#f_active').checked : (d.active??true),
       extra:{...Object.fromEntries([...root.querySelectorAll('[data-x]')].map(i=>[i.dataset.x, i.value.trim()])), service:$('#f_service').value.trim()},
-      repId: $('#f_rep') ? ($('#f_rep').value||null) : (d.repId||null),
-      commissionType: $('#f_rep')?.value ? $('#f_ctype').value : null,
+      repId: $('#f_entity').value==='pvt' ? null : $('#f_rep') ? ($('#f_rep').value||null) : (d.repId||null),
+      commissionType: $('#f_entity').value!=='pvt' && $('#f_rep')?.value ? $('#f_ctype').value : null,
       commissionValue: $('#f_rep')?.value ? n($('#f_cval').value) : 0,
       commissionMonths: $('#f_rep')?.value && $('#f_ctype').value==='recurring_percent' && $('#f_cmonths').value ? n($('#f_cmonths').value) : null});
     root.querySelectorAll('.kindpick button').forEach(b=>b.onclick=()=>{ const cur=collect(); cur.kind=b.dataset.k; openClientForm(id, cur); root.querySelector('#f_name')?.focus(); });
@@ -987,6 +1086,7 @@ function openClientForm(id, draft){
       $('#calcLbl').textContent = once ? 'المبلغ الإجمالي' : $('#f_cycle').value==='weekly' ? 'قيمة الدفعة الأسبوعية' : 'قيمة الدفعة الشهرية';
       $('#dueLbl').textContent = once ? 'ميعاد الدفع' : 'ميعاد الدفعة الجاية';
       $('#f_total').innerHTML=money(amt);
+      if($('#repGroup')) $('#repGroup').hidden = $('#f_entity').value==='pvt';
       if($('#f_rep')){ const on=!!$('#f_rep').value; $('#commWrap').hidden=!on;
         const t=$('#f_ctype').value; $('#cmonthsWrap').hidden=t!=='recurring_percent'; $('#cvalLbl').textContent = t==='once_fixed'?'المبلغ (ج.م)':'النسبة %';
         const cv=n($('#f_cval').value); $('#f_comm').innerHTML = money(t==='once_fixed'?cv:amt*cv/100);
@@ -1013,7 +1113,7 @@ function openForm(type, id, preset={}){
   if(type==='income'){
     title=item?'تعديل دخل':'دخل جديد';
     body=`<label class="fl">البيان<input id="f_desc" required value="${esc(d.desc||'')}" placeholder="مثلاً: مشروع تصميم"></label>
-      <div class="f2"><label class="fl">الكيان<select id="f_entity">${opt(entMap,d.entity||'nov')}</select></label>
+      <div class="f2"><label class="fl">الكيان<select id="f_entity">${opt(entMapC,d.entity||'nov')}</select></label>
       <label class="fl">المبلغ<input id="f_amount" type="number" inputmode="decimal" step="any" min="0" required value="${d.amount??''}"></label></div>
       <label class="fl">التاريخ<input id="f_date" type="date" value="${d.date||today()}"></label>`;
   }else if(type==='expense'){
@@ -1024,10 +1124,13 @@ function openForm(type, id, preset={}){
       <div class="f2"><label class="fl">يخص<select id="f_entity">${opt(entMapG,d.entity||'general')}</select></label>
       <label class="fl">النوع<select id="f_cat">${CATS.map(c=>`<option${c===d.cat?' selected':''}>${c}</option>`).join('')}</select></label></div>
       <label class="fl">مين دفع<select id="f_paidBy">${opt(payerMap,d.paidBy||'company')}</select></label>
-      <label class="cb" id="settledWrap"><input type="checkbox" id="f_settled"${d.settled?' checked':''}> السلفة اتسددت للشريك</label>`;
+      <p class="hint" id="advHint">لو شريك دفعها من جيبه، هتتسجل سلفة ليه وترجعله من «الفريق ← رد سلفة».</p>`;
   }else if(type==='payout'){
-    title=item?'تعديل صرف':'صرف لشريك';
+    title=item?'تعديل صرف':(d.kind==='advance'?'رد سلفة':'سحب أرباح');
     body=`<label class="fl">الشريك<select id="f_partner">${opt(PARTNERS,d.partner||'fathy')}</select></label>
+      <div class="f2"><label class="fl">النوع<select id="f_kind">${opt({advance:'رد سلفة',profit:'سحب أرباح'},d.kind||'profit')}</select></label>
+      <label class="fl" id="poolWrap">من<select id="f_pool">${opt({company:'فلوس الشركة',pvt:PVT.full},d.pool||'company')}</select></label></div>
+      <div class="calc" id="payHint"></div>
       <div class="f2"><label class="fl">المبلغ<input id="f_amount" type="number" inputmode="decimal" step="any" min="0" required value="${d.amount??''}"></label>
       <label class="fl">التاريخ<input id="f_date" type="date" value="${d.date||today()}"></label></div>
       <label class="fl">ملاحظة<input id="f_note" value="${esc(d.note||'')}" placeholder="اختياري"></label>`;
@@ -1067,14 +1170,27 @@ function openForm(type, id, preset={}){
     const $=s=>root.querySelector(s);
     $('#cancelBtn').onclick = type==='rep'&&item ? ()=>openRep(id) : closeSheet;
     if(item) delFlow(root, col, id, ()=>openForm(type,id), type==='rep'?' العملاء اللي جابهم هيفضلوا، بس من غير عمولة.':'');
-    if(type==='expense'){ const sync=()=>{ $('#settledWrap').hidden=$('#f_paidBy').value==='company'; }; $('#f_paidBy').onchange=sync; sync(); }
+    if(type==='expense'){ const sync=()=>{ $('#advHint').hidden=$('#f_paidBy').value==='company'; }; $('#f_paidBy').onchange=sync; sync(); }
+    if(type==='payout'){
+      let touched=!!item;
+      $('#f_amount').addEventListener('input',()=>touched=true);
+      const sync=()=>{ const k=$('#f_partner').value, kind=$('#f_kind').value; const inP=PVT_PARTNERS.includes(k);
+        $('#poolWrap').hidden=!inP; if(!inP) $('#f_pool').value='company';
+        const x=books().p[k], pool=$('#f_pool').value;
+        const left = kind==='advance' ? x.adv[pool]-x.advRet[pool]+(item&&item.kind==='advance'&&poolOf(item)===pool&&item.partner===k?n(item.amount):0)
+                                      : (pool==='pvt'?x.profitP:x.profitC)+(item&&item.kind!=='advance'&&poolOf(item)===pool&&item.partner===k?n(item.amount):0);
+        $('#payHint').innerHTML = `<span>${kind==='advance'?'باقي له سلف':'باقي له أرباح'}${inP?(pool==='pvt'?' في الحساب الخاص':' من الشركة'):''}</span><b>${money(left)}</b>`;
+        if(!touched) $('#f_amount').value = left>0 ? Math.round(left*100)/100 : '';
+        root.querySelector('h3').textContent = item?'تعديل صرف':(kind==='advance'?'رد سلفة':'سحب أرباح'); };
+      ['#f_partner','#f_kind','#f_pool'].forEach(q=>$(q).addEventListener('change',sync)); sync();
+    }
     if(!item) setTimeout(()=>root.querySelector('input')?.focus(),80);
     $('#frm').onsubmit=async e=>{
       e.preventDefault(); if(!required(root)) return;
       const base={id:item?.id, createdAt:item?.createdAt||Date.now()}; let rec;
       if(type==='income') rec={...base, desc:v$(root,'#f_desc').trim(), entity:v$(root,'#f_entity'), amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date')};
-      else if(type==='expense'){ const pb=v$(root,'#f_paidBy'); rec={...base, desc:v$(root,'#f_desc').trim(), amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date'), entity:v$(root,'#f_entity'), cat:v$(root,'#f_cat'), paidBy:pb, settled:pb!=='company'&&$('#f_settled').checked}; }
-      else if(type==='payout') rec={...base, partner:v$(root,'#f_partner'), amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date'), note:v$(root,'#f_note').trim()};
+      else if(type==='expense'){ const pb=v$(root,'#f_paidBy'); rec={...base, desc:v$(root,'#f_desc').trim(), amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date'), entity:v$(root,'#f_entity'), cat:v$(root,'#f_cat'), paidBy:pb, settled:false}; }
+      else if(type==='payout') rec={...base, partner:v$(root,'#f_partner'), kind:v$(root,'#f_kind'), pool:PVT_PARTNERS.includes(v$(root,'#f_partner'))?v$(root,'#f_pool'):'company', amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date'), note:v$(root,'#f_note').trim()};
       else if(type==='rep') rec={...base, name:v$(root,'#f_name').trim(), phone:v$(root,'#f_phone').trim(), note:v$(root,'#f_note').trim(), active:$('#f_active')?$('#f_active').checked:true};
       else if(type==='reppay') rec={...base, repId:v$(root,'#f_rep'), amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date'), note:v$(root,'#f_note').trim()};
       else if(type==='sub') rec={...base, name:v$(root,'#f_name').trim(), amount:n(v$(root,'#f_amount')), cycle:v$(root,'#f_cycle'), nextDate:v$(root,'#f_next'), remindDays:n(v$(root,'#f_remind')), entity:v$(root,'#f_entity'), paidBy:v$(root,'#f_paidBy'), active:$('#f_active')?$('#f_active').checked:true, note:item?.note||null};
@@ -1095,7 +1211,7 @@ function openClient(id){
   const c=S.clients.find(x=>x.id===id); if(!c) return closeSheet();
   const st=clientState(c), amt=cycleAmount(c), paid=paidBy(c.id), cfg=kcfg(c);
   const pays=S.payments.filter(p=>p.clientId===id).sort(byDate);
-  const sub=[cfg.label, clientDesc(c), brand(c.entity).name, CYCLES[c.cycle]].filter(Boolean).join(' · ');
+  const sub=[cfg.label, clientDesc(c), c.entity==='pvt'?PVT.full:brand(c.entity).name, CYCLES[c.cycle]].filter(Boolean).join(' · ');
   sheet(`<h3>${esc(c.name)}</h3><p class="sub">${esc(sub)}${c.phone?` · <span class="num">${esc(c.phone)}</span>`:''}</p>
     <div class="kv">
       <div><span>${c.cycle==='once'?'المبلغ':'قيمة الدفعة'}</span><b>${money(amt)}</b></div>
@@ -1130,7 +1246,7 @@ function openClient(id){
     });
   });
 }
-const invNo = (p,c) => `${ENTS[c?.entity]?.code||'INV'}-${(p.date||'').slice(0,4)}-${String(p.invoiceNo||0).padStart(4,'0')}`;
+const invNo = (p,c) => `${ENTS[bkey(c?.entity)]?.code||'INV'}-${(p.date||'').slice(0,4)}-${String(p.invoiceNo||0).padStart(4,'0')}`;
 function openPayment(clientId){
   const c=S.clients.find(x=>x.id===clientId); const st=clientState(c), amt=cycleAmount(c);
   const def = st.owed>0 ? st.owed : c.cycle==='once' ? Math.max(0,amt-paidBy(c.id)) : amt;
@@ -1295,7 +1411,7 @@ function docFoot(key, page, pages){
 const docWrap = (key, inner) => `<div class="doc" style="--brand:${brand(key).hex}">${inner}</div>`;
 
 function docInvoice(pid){
-  const p=S.payments.find(x=>x.id===pid), c=S.clients.find(x=>x.id===p.clientId), key=c.entity, cfg=kcfg(c);
+  const p=S.payments.find(x=>x.id===pid), c=S.clients.find(x=>x.id===p.clientId), key=bkey(c.entity), cfg=kcfg(c);
   const svc = ex(c).service || 'اشتراك';
   const periodTxt = c.cycle==='monthly' ? `اشتراك شهر ${monthName(p.date.slice(0,7))}` : c.cycle==='weekly' ? `اشتراك أسبوع ${fdateY(p.date)}` : 'دفعة';
   const fullCycle = cycleAmount(c);
@@ -1353,17 +1469,55 @@ const ledgerRows=(L, range)=>[
   ...L.rows.map(r=>({cells:[`<span class="num">${fnum(r.date)}</span>`, `${esc(r.desc)}${r.sub?`<span class="sub">${esc(r.sub)}</span>`:''}`, r.credit?dm(r.credit):'', r.debit?dm(r.debit):'', dm(r.bal)]}))];
 const periodLabel = p => p==='month'?`شهر ${monthName(today().slice(0,7))}` : p==='last'?`شهر ${monthName(periodRange('last')[0].slice(0,7))}` : 'من البداية حتى '+fdateY(today());
 
-function partnerEntries(pk){
-  const cmap=Object.fromEntries(S.clients.map(c=>[c.id,c])), agg={};
-  const add=(date,entity,amt)=>{ if(!date||!ENTS[entity]) return; const k=date.slice(0,7)+'|'+entity; agg[k]=(agg[k]||0)+n(amt); };
-  S.payments.forEach(p=>{ const c=cmap[p.clientId]; if(c) add(p.date,c.entity,p.amount); });
-  S.incomes.forEach(i=>add(i.date,i.entity,i.amount));
-  const t=today(), out=[];
-  Object.entries(agg).forEach(([k,rev])=>{ const [m,e]=k.split('|'); const share=ENTS[e].split[pk]||0; if(!share||!rev) return; const end=monthEnd(m);
-    out.push({date:end>t?t:end, order:1, desc:`نصيب الأرباح من ${ENTS[e].name} — ${monthName(m)}`, sub:`${share*100}% من دخل ${fmt(rev)} ج.م`, credit:rev*share, debit:0}); });
-  S.expenses.filter(e=>e.paidBy===pk && !e.settled).forEach(e=>out.push({date:e.date, order:2, desc:`سلفة: ${e.desc}`, sub:'دفعها من حسابه الشخصي', credit:n(e.amount), debit:0}));
-  S.payouts.filter(x=>x.partner===pk).forEach(x=>out.push({date:x.date, order:3, desc:'صرف أرباح', sub:x.note||'', credit:0, debit:n(x.amount)}));
-  return out;
+function partnerSections(k){
+  const B=books(), x=B.p[k], C=B.company, P=B.pv, sections=[];
+  const run=(items,byOrder)=>{ let bal=0; return items.sort((a,b)=>byOrder?((a.order||0)-(b.order||0)||(a.date||'').localeCompare(b.date||'')):((a.date||'').localeCompare(b.date||'')||(a.order||0)-(b.order||0))).map(r=>{ bal+=r.credit-r.debit;
+    return {cells:[r.date?`<span class="num">${fnum(r.date)}</span>`:'حتى اليوم', `${esc(r.desc)}${r.sub?`<span class="sub">${esc(r.sub)}</span>`:''}`, r.credit?dm(r.credit):'', r.debit?dm(r.debit):'', dm(bal)]}; }); };
+  const advItems=[
+    ...S.expenses.filter(e=>e.paidBy===k).map(e=>({date:e.date, order:1, desc:`دفع من جيبه: ${e.desc}`, sub:e.entity==='pvt'?PVT.name:entName(e.entity), credit:n(e.amount), debit:0})),
+    ...S.payouts.filter(p=>p.partner===k && p.kind==='advance').map(p=>({date:p.date, order:2, desc:'اترد له', sub:[poolOf(p)==='pvt'?'من '+PVT.name:'', p.note||''].filter(Boolean).join(' · '), credit:0, debit:n(p.amount)}))];
+  sections.push({title:'1. السلف (فلوس دفعها من جيبه للشركة)', rows:run(advItems), total:['الباقي له من السلف', dm(x.advOwed)]});
+  const profItems=[
+    ...EKEYS.filter(e=>ENTS[e].split[k] && x.byEnt[e]>0).map(e=>({date:'', order:1, desc:`نصيبه من صافي ربح ${ENTS[e].name} (${ENTS[e].split[k]*100}%)`, sub:`صافي ${ENTS[e].name} بعد المصروفات ${fmt(B.ent[e].dist)} ج.م`, credit:x.byEnt[e], debit:0})),
+    ...S.payouts.filter(p=>p.partner===k && p.kind!=='advance' && poolOf(p)==='company').map(p=>({date:p.date, order:2, desc:'سحب أرباح', sub:p.note||'', credit:0, debit:n(p.amount)}))];
+  sections.push({title:'2. أرباح الشركة', note: C.net<=0?`الشركة لسه في عجز ${fmt(C.deficit)} ج.م (المصروفات أكبر من الدخل)، فمفيش أرباح اتوزعت لحد دلوقتي.`:'', rows:run(profItems,true), total:[x.profitC<0?'سحب زيادة عن نصيبه':'الباقي له من الأرباح', dm(x.profitC)]});
+  if(x.inPvt){
+    const pItems=[
+      ...(x.earnedP>0?[{date:'', order:1, desc:`نصيبه من صافي ${PVT.name} (${fmt(P.split[k]*100)}%)`, sub:`دخل ${fmt(P.rev)} − مصروفات ${fmt(P.cost)} = ${fmt(P.net)} ج.م`, credit:x.earnedP, debit:0}]:[]),
+      ...S.payouts.filter(p=>p.partner===k && p.kind!=='advance' && poolOf(p)==='pvt').map(p=>({date:p.date, order:2, desc:'سحب أرباح', sub:p.note||'', credit:0, debit:n(p.amount)}))];
+    sections.push({title:`3. ${PVT.full} (المدرسين القدام)`, rows:run(pItems,true), total:[x.profitP<0?'سحب زيادة عن نصيبه':'الباقي له', dm(x.profitP)]});
+  }
+  return {x, sections};
+}
+function docPartnerStatement(k){
+  const {x, sections}=partnerSections(k), key='group', phone=settings().phones?.[k];
+  const cards=[{l:'باقي له من السلف',v:dm(x.advOwed)},{l:'باقي له من أرباح الشركة',v:dm(x.profitC)}, ...(x.inPvt?[{l:'باقي له من الحساب الخاص',v:dm(x.profitP)}]:[]), {l:'المستحق له كله',v:dm(x.total),hl:1}];
+  // paginate: a section never starts with fewer than 3 rows left on a page
+  const PAGE=975, FIRST=390, CONT=40, SEC=88, ROW=50, TOT=46, NOTE=34, CLOSE=150;
+  const pages=[[]]; let used=FIRST;
+  sections.forEach(sec=>{ const rows=sec.rows.length?sec.rows:[{cells:['','لا توجد حركات','','','']}];
+    let i=0; while(i<rows.length){
+      const head=SEC+(sec.note&&i===0?NOTE:0);
+      if(used+head+ROW+TOT>PAGE){ pages.push([]); used=CONT; }
+      const fit=Math.max(1, Math.floor((PAGE-used-head-TOT)/ROW));
+      const take=Math.min(rows.length-i, fit);
+      pages[pages.length-1].push({...sec, rows:rows.slice(i,i+take), first:i===0, last:i+take>=rows.length});
+      used+=head+take*ROW+TOT; i+=take; } });
+  if(used+CLOSE>PAGE) pages.push([]);
+  const head=`<thead><tr>${ledgerCols.map(c=>`<th class="${c.n?'n':''}" ${c.w?`style="width:${c.w}"`:''}>${c.l}</th>`).join('')}</tr></thead>`;
+  const html=pages.map((pg,pi)=>docWrap(key, `
+    ${pi===0 ? docHead(key,'كشف حساب شريك',[['التاريخ',`<span class="num">${fnum(today())}</span>`],['الفترة','من البداية حتى اليوم']]) + `
+      <div class="d-parties"><div class="d-box"><div class="lbl">الشريك</div><div class="nm">${esc(PARTNERS[k])}</div>
+        <div class="ln">شريك في: ${EKEYS.filter(e=>ENTS[e].split[k]).map(e=>`${ENTS[e].name} ${ENTS[e].split[k]*100}%`).join(' · ')}${x.inPvt?` · ${PVT.name} ${fmt(pvtSplit()[k]*100)}%`:''}</div>${phone?`<div class="ln"><span class="num">${esc(phone)}</span></div>`:''}</div></div>
+      <div class="d-cards" style="grid-template-columns:repeat(${cards.length},1fr)">${cards.map(c=>`<div class="${c.hl?'hl':''}"><span>${c.l}</span><b>${c.v}</b></div>`).join('')}</div>`
+      : `<div class="band"></div><p class="d-cont">كشف حساب ${esc(PARTNERS[k])} · تابع</p>`}
+    ${pg.map(sec=>`<h3 class="d-sec">${esc(sec.title)}${sec.first?'':' (تابع)'}</h3>${sec.first&&sec.note?`<p class="d-note" style="margin:0 0 8px">${esc(sec.note)}</p>`:''}
+      <table class="d-table">${head}<tbody>${sec.rows.map((r,ri)=>`<tr class="${ri%2?'alt':''}">${r.cells.map((v,ci)=>`<td class="${ledgerCols[ci].n?'n':''}">${v}</td>`).join('')}</tr>`).join('')}
+      ${sec.last?`<tr class="open"><td></td><td>${sec.total[0]}</td><td></td><td></td><td class="n">${sec.total[1]}</td></tr>`:''}</tbody></table>`).join('')}
+    ${pi===pages.length-1?`<div class="d-sum"><div class="d-words">المستحق له كله (سلف + أرباح):<br><b>فقط ${tafqeet(Math.abs(x.total))} جنيهاً مصرياً ${x.total<0?'(عليه)':''} لا غير</b></div>
+      <div class="d-totals"><div><span>السلف</span><span>${dm(x.advOwed)}</span></div><div><span>أرباح الشركة</span><span>${dm(x.profitC)}</span></div>${x.inPvt?`<div><span>الحساب الخاص</span><span>${dm(x.profitP)}</span></div>`:''}<div><span>الإجمالي</span><span>${dm(x.total)}</span></div></div></div>`:''}
+    ${docFoot(key,pi+1,pages.length)}`)).join('');
+  return {html, total:x.total, phone};
 }
 function repEntries(id){
   const out=allCommissions().filter(x=>x.repId===id).map(x=>({date:x.date, order:1, desc:`عمولة — ${x.client}`, sub:x.rate!==null?`${fmt(x.rate)}% من دفعة ${fmt(x.payAmount)} ج.م`:x.kind, credit:x.amount, debit:0}));
@@ -1374,7 +1528,7 @@ function docLedgerStatement(kind, id, per){
   const range=periodRange(per);
   const isP = kind==='partner';
   const name = isP ? PARTNERS[id] : (S.reps.find(r=>r.id===id)?.name||'');
-  const L = ledger(isP?partnerEntries(id):repEntries(id), range);
+  const L = ledger(repEntries(id), range);
   const phone = isP ? settings().phones?.[id] : S.reps.find(r=>r.id===id)?.phone;
   return {L, name, phone, html: docStatement({key:'group', title:'كشف حساب', partyLbl:isP?'الشريك':'مسؤول المبيعات', party:name,
     partyLines:[isP?'شريك في: '+EKEYS.filter(e=>ENTS[e].split[id]).map(e=>`${ENTS[e].name} ${ENTS[e].split[id]*100}%`).join(' · '):`عدد العملاء: <span class="num">${S.clients.filter(c=>c.repId===id).length}</span>`, phone?`<span class="num">${esc(phone)}</span>`:''].filter(Boolean),
@@ -1388,7 +1542,7 @@ function docClientStatement(c){
   const st=clientState(c), paid=paidBy(c.id), cfg=kcfg(c);
   let run=0;
   const rows=pays.map(p=>{ run+=n(p.amount); return {cells:[`<span class="num">${fnum(p.date)}</span>`, `<span class="num">${invNo(p,c)}</span>`, `${esc(ex(c).service||'اشتراك')}<span class="sub">${esc(p.note||'')}</span>`, dm(p.amount), dm(run)]}; });
-  return docStatement({key:c.entity, title:'كشف حساب', partyLbl:'العميل', party:c.name,
+  return docStatement({key:bkey(c.entity), title:'كشف حساب', partyLbl:'العميل', party:c.name,
     partyLines:[[cfg.label, clientDesc(c)].filter(Boolean).join(' · '), c.phone?`<span class="num">${esc(c.phone)}</span>`:'', `نظام الاشتراك: ${CYCLES[c.cycle]} · ${dm(cycleAmount(c))}`].filter(Boolean),
     periodLbl:'من بداية التعامل',
     cards:[{l:'قيمة الاشتراك',v:dm(cycleAmount(c))},{l:'إجمالي المدفوع',v:dm(paid)},{l:'عدد الدفعات',v:`<span class="num">${pays.length}</span>`},{l:st.owed>0?'المستحق حالياً':'الموعد القادم',v:st.owed>0?dm(st.owed):(c.nextDue&&c.cycle!=='once'?fdateY(c.nextDue):'—'),hl:1}],
@@ -1445,6 +1599,11 @@ function invoiceFlow(pid, back, fresh){
     <div class="acts"><button type="button" class="btn grow" id="okBtn">تمام</button></div>`, r=>{ r.querySelector('#invBtn').onclick=go; r.querySelector('#okBtn').onclick=back||closeSheet; });
 }
 function statementFlow(kind, id){
+  if(kind==='partner'){
+    const name=PARTNERS[id], res=docPartnerStatement(id);
+    const text=fillTpl(settings().tpl.statement,{'الاسم':name,'الكيان':brand('group').name,'الفترة':'من البداية حتى '+fdateY(today()),'المبلغ':fmt(res.total)});
+    return makeDoc(()=>res.html, {name:`كشف-حساب-${name}`, phone:res.phone, text, back:closeSheet});
+  }
   let per='month';
   const name = kind==='partner'?PARTNERS[id]:repName(id);
   const back = kind==='rep' ? ()=>openRep(id) : closeSheet;
@@ -1489,7 +1648,12 @@ function openSettings(draft){
       <label class="fl">تأكيد استلام دفعة<textarea id="t_receipt">${esc(s.tpl.receipt)}</textarea></label>
       <label class="fl">إرسال كشف حساب<textarea id="t_statement">${esc(s.tpl.statement)}</textarea></label>
       <button type="button" class="btn sm" id="resetTpl">رجّع الرسايل الأصلية</button>`
-    : setSeg==='partners' ? `<p class="hint">أرقام الشركاء عشان تبعتلهم كشوف الحساب.</p><div class="f2">${PKEYS.map(k=>`<label class="fl">${PARTNERS[k]}<input id="ph_${k}" type="tel" dir="ltr" style="text-align:right" value="${esc(s.phones?.[k]||'')}" placeholder="01xxxxxxxxx"></label>`).join('')}</div>`
+    : setSeg==='partners' ? `<div class="group"><p class="gh">${PVT.full} <small>تقسيم أرباح المدرسين القدام</small></p>
+        <div class="f2" style="grid-template-columns:repeat(3,minmax(0,1fr))"><label class="fl">فتحي %<input id="sp_fathy" type="number" inputmode="decimal" min="0" max="100" value="${n(s.pvtSplit?.fathy??40)}"></label>
+        <label class="fl">عادل %<input id="sp_adel" type="number" inputmode="decimal" min="0" max="100" value="${n(s.pvtSplit?.adel??40)}"></label>
+        <label class="fl">احتياطي %<input id="sp_reserve" type="number" inputmode="decimal" min="0" max="100" value="${n(s.pvtSplit?.reserve??20)}"></label></div>
+        <p class="hint">لازم المجموع يبقى 100. لو عايزينها نص بنص اكتب 50 و50 و0.</p></div>
+      <p class="hint">أرقام الشركاء عشان تبعتلهم كشوف الحساب.</p><div class="f2">${PKEYS.map(k=>`<label class="fl">${PARTNERS[k]}<input id="ph_${k}" type="tel" dir="ltr" style="text-align:right" value="${esc(s.phones?.[k]||'')}" placeholder="01xxxxxxxxx"></label>`).join('')}</div>`
     : `<div class="tools col"><button type="button" class="btn" id="exportBtn">تنزيل نسخة احتياطية</button>
       <label class="btn" for="importFile">استيراد نسخة</label><input type="file" id="importFile" accept=".json,application/json" hidden>
       <button type="button" class="btn dan" id="logoutBtn">تسجيل خروج</button></div>`;
@@ -1501,6 +1665,7 @@ function openSettings(draft){
     const collect=()=>{ const out={...s, brands:JSON.parse(JSON.stringify(s.brands||{})), tpl:{...s.tpl}, phones:{...(s.phones||{})}};
       root.querySelectorAll('[data-b]').forEach(i=>{ const [k,f]=i.dataset.b.split('.'); out.brands[k]={...(out.brands[k]||{}), [f]:i.value.trim()}; });
       ['remind','late','receipt','statement'].forEach(k=>{ if($('#t_'+k)) out.tpl[k]=$('#t_'+k).value; });
+      if($('#sp_fathy')) out.pvtSplit={fathy:n($('#sp_fathy').value), adel:n($('#sp_adel').value), reserve:n($('#sp_reserve').value)};
       PKEYS.forEach(k=>{ if($('#ph_'+k)){ const v=$('#ph_'+k).value.trim(); if(v) out.phones[k]=v; else delete out.phones[k]; } });
       return out; };
     root.querySelectorAll('[data-sseg]').forEach(b=>b.onclick=()=>{ const cur=collect(); setSeg=b.dataset.sseg; openSettings(cur); });
@@ -1513,7 +1678,8 @@ function openSettings(draft){
     $('#logoutBtn')?.addEventListener('click',async()=>{ await sb.auth.signOut(); try{localStorage.removeItem(LS_KEY);}catch(_){}; location.reload(); });
     $('#frm').onsubmit=async e=>{ e.preventDefault(); const out=collect();
       const tpl={}; Object.keys(DEFAULT_TPL).forEach(k=>{ if(out.tpl[k] && out.tpl[k]!==DEFAULT_TPL[k]) tpl[k]=out.tpl[k]; });
-      const value={phones:out.phones, brands:out.brands, tpl};
+      if(out.pvtSplit && Math.abs(out.pvtSplit.fathy+out.pvtSplit.adel+out.pvtSplit.reserve-100)>0.01){ toast('مجموع نسب الحساب الخاص لازم يبقى 100'); return; }
+      const value={...(S.settings.find(x=>x.id==='main')?.value||{}), phones:out.phones, brands:out.brands, tpl, ...(out.pvtSplit?{pvtSplit:out.pvtSplit}:{})};
       if(await save('settings',{id:'main', value})) closeSheet(); };
   });
 }
@@ -1532,7 +1698,7 @@ document.getElementById('view').addEventListener('click',async e=>{
   if(ds.eseg){ expSeg=ds.eseg; return render(); }
   if(ds.dseg){ dateSeg=ds.dseg; return render(); }
   if(ds.tseg){ teamSeg=ds.tseg; return render(); }
-  if(ds.pay) return openForm('payout',null,{partner:ds.pay});
+  if(ds.pay){ const [partner,kind]=ds.pay.split(':'); return openForm('payout',null,{partner, kind:kind||'profit'}); }
   if(ds.reppay) return openForm('reppay',null,{repId:ds.reppay});
   if(ds.stmt){ const [k,id]=ds.stmt.split(':'); return statementFlow(k,id); }
   if(ds.done){ const tk=S.tasks.find(x=>x.id===ds.done); if(tk){ await save('tasks',{...tk, done:!tk.done}, true); toast(tk.done?'رجعت':'برافو 👏'); } }
