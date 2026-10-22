@@ -364,7 +364,7 @@ const CYCLES = {weekly:'أسبوعي', monthly:'شهري', once:'مرة واحد
 const SUB_CYCLES = {monthly:'شهري', quarterly:'كل 3 شهور', yearly:'سنوي'};
 const COMM_TYPES = {recurring_percent:'نسبة من كل دفعة', once_percent:'نسبة من أول دفعة بس', once_fixed:'مبلغ ثابت مرة واحدة'};
 const CATS = ['اشتراكات وأدوات','إعلانات','إنترنت ومعدات','رواتب ومكافآت','أخرى'];
-const COLS = ['clients','payments','incomes','expenses','payouts','subscriptions','tasks','reps','rep_payouts','settings'];
+const COLS = ['clients','payments','incomes','expenses','payouts','subscriptions','tasks','reps','rep_payouts','transfers','settings'];
 const DEFAULT_TPL = {
   remind:
 `*{الكيان}*
@@ -723,13 +723,14 @@ function books(){
   const paidByPool = pool => S.expenses.filter(e=>e.paidBy==='company' && poolOfEnt(e.entity)===pool).reduce((a,e)=>a+n(e.amount),0);
   const outPool = pool => S.payouts.filter(x=>poolOf(x)===pool).reduce((a,x)=>a+n(x.amount),0);
   const sumP = f => PKEYS.reduce((a,k)=>a+f(p[k]),0);
+  const loan = S.transfers.reduce((a,t)=>a+(t.direction==='to_pvt'?1:-1)*n(t.amount),0);   // what the private pool owes the company
   const company={rev:revC, cost:costC, general, net:N, deficit:N<0?-N:0, reserveGross, commTotal, repPaid,
     reserve:reserveGross-commTotal, repOwed:commTotal-repPaid,
-    cash:revC-paidByPool('company')-outPool('company')-repPaid,
+    cash:revC-paidByPool('company')-outPool('company')-repPaid-loan, loanOut:loan,
     advOwed:sumP(x=>x.adv.company-x.advRet.company), profitOwed:sumP(x=>x.profitC),
     partnersEarned:sumP(x=>x.earnedC)};
   const pv={rev:rev.pvt, cost:cost.pvt, net:Np, deficit:Np<0?-Np:0, dist:distP, split:ps, reserve:distP*ps.reserve,
-    cash:rev.pvt-paidByPool('pvt')-outPool('pvt'),
+    cash:rev.pvt-paidByPool('pvt')-outPool('pvt')+loan, loanOwed:loan,
     advOwed:sumP(x=>x.adv.pvt-x.advRet.pvt), profitOwed:sumP(x=>x.inPvt?x.profitP:0)};
   return {ent, company, pv, p};
 }
@@ -827,6 +828,7 @@ function vHome(){
       ${wl('أرباح الشركاء اللي لسه ما اتسحبتش', C.profitOwed, C.profitOwed<0?'neg':'', C.profitOwed<0?'سحبوا أكتر من نصيبهم':'')}
       ${hasReps?wl('عمولات السيلز اللي لسه ما اتصرفتش', C.repOwed):''}
       ${wl('احتياطي الشركة', C.reserve, C.reserve<0?'neg':'')}
+      ${C.loanOut?wl('− سلفة للحساب الخاص', -C.loanOut, C.loanOut>0?'neg':'', 'فلوس الشركة اللي اتصرفت على الحساب الخاص وهترجع'):''}
       ${C.deficit?wl('− العجز', -C.deficit, 'neg', 'المصروفات لسه أكبر من الدخل'):''}
       ${wl('= فلوس الشركة', C.cash, 'tot'+(C.cash<0?' neg':''))}
       ${C.cash<0?`<div class="note bad">الشركة صرفت أكتر من اللي دخلها بـ ${money(-C.cash)}. الفرق ده اتدفع من فلوس تانية${pvtActive?' (غالباً من الحساب الخاص)':''}، فهو دين على الشركة.</div>`:''}
@@ -839,8 +841,12 @@ function vHome(){
       <div class="ent-h"><i></i><div><h3>${PVT.full}</h3><small>المدرسين القدام · برا حسابات الشركة خالص</small></div></div>
       ${wl('الدخل', P.rev)}${wl('− المصروفات', P.cost)}
       ${wl(P.net<0?'= عجز':'= صافي الربح', P.net, P.net<0?'tot neg':'tot pos')}
+      ${P.net<=0?`<div class="note bad">لسه مفيش أرباح في الحساب ده. محتاج دخل ${money(P.deficit)} كمان من المدرسين القدام يغطي المصاريف الأول.</div>`:''}
       ${P.net>0?`${wl(`فتحي (${fmt(P.split.fathy*100)}%)`, P.dist*P.split.fathy,'sub')}${wl(`عادل (${fmt(P.split.adel*100)}%)`, P.dist*P.split.adel,'sub')}${P.split.reserve?wl(`احتياطي (${fmt(P.split.reserve*100)}%)`, P.reserve,'sub'):''}`:''}
+      ${P.loanOwed?wl('مديون للشركة', P.loanOwed, 'neg', 'استلفها من فلوس الشركة ولازم ترجعلها'):''}
       ${wl('الفلوس اللي في الحساب ده دلوقتي', P.cash, P.cash<0?'neg':'')}
+      ${P.cash<0?`<div class="note bad">الحساب الخاص اتصرف منه أكتر من اللي دخله بـ ${money(-P.cash)}.</div>`:''}
+      <div class="foot" style="padding:10px 16px 14px;display:flex;gap:8px;flex-wrap:wrap">${P.loanOwed>0?`<button type="button" class="btn sm" data-xfer="to_company">رجّع للشركة</button>`:''}<button type="button" class="btn sm" data-xfer="to_pvt">سلفة من الشركة</button><button type="button" class="btn sm" data-xlist="1">السجل</button></div>
     </article>`:''}
 
     <article class="card">
@@ -1107,7 +1113,7 @@ function openClientForm(id, draft){
 
 /* ---- generic forms ---- */
 function openForm(type, id, preset={}){
-  const colOf={income:'incomes',expense:'expenses',payout:'payouts',sub:'subscriptions',task:'tasks',rep:'reps',reppay:'rep_payouts'};
+  const colOf={transfer:'transfers',income:'incomes',expense:'expenses',payout:'payouts',sub:'subscriptions',task:'tasks',rep:'reps',reppay:'rep_payouts'};
   const col=colOf[type]; const item=id?S[col].find(x=>x.id===id):null; const d=item?{...item}:{...preset};
   let title, body;
   if(type==='income'){
@@ -1132,6 +1138,12 @@ function openForm(type, id, preset={}){
       <label class="fl" id="poolWrap">من<select id="f_pool">${opt({company:'فلوس الشركة',pvt:PVT.full},d.pool||'company')}</select></label></div>
       <div class="calc" id="payHint"></div>
       <div class="f2"><label class="fl">المبلغ<input id="f_amount" type="number" inputmode="decimal" step="any" min="0" required value="${d.amount??''}"></label>
+      <label class="fl">التاريخ<input id="f_date" type="date" value="${d.date||today()}"></label></div>
+      <label class="fl">ملاحظة<input id="f_note" value="${esc(d.note||'')}" placeholder="اختياري"></label>`;
+  }else if(type==='transfer'){
+    title=item?'تعديل تحويل':(d.direction==='to_company'?'الحساب الخاص بيرجّع للشركة':'سلفة من الشركة للحساب الخاص');
+    body=`<label class="fl">النوع<select id="f_dir">${opt({to_pvt:'الشركة سلّفت الحساب الخاص',to_company:'الحساب الخاص رجّع للشركة'},d.direction||'to_pvt')}</select></label>
+      <div class="f2"><label class="fl">المبلغ<input id="f_amount" type="number" inputmode="decimal" step="any" min="0" required value="${d.amount??(d.direction==='to_company'&&books().pv.loanOwed>0?books().pv.loanOwed:'')}"></label>
       <label class="fl">التاريخ<input id="f_date" type="date" value="${d.date||today()}"></label></div>
       <label class="fl">ملاحظة<input id="f_note" value="${esc(d.note||'')}" placeholder="اختياري"></label>`;
   }else if(type==='rep'){
@@ -1191,6 +1203,7 @@ function openForm(type, id, preset={}){
       if(type==='income') rec={...base, desc:v$(root,'#f_desc').trim(), entity:v$(root,'#f_entity'), amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date')};
       else if(type==='expense'){ const pb=v$(root,'#f_paidBy'); rec={...base, desc:v$(root,'#f_desc').trim(), amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date'), entity:v$(root,'#f_entity'), cat:v$(root,'#f_cat'), paidBy:pb, settled:false}; }
       else if(type==='payout') rec={...base, partner:v$(root,'#f_partner'), kind:v$(root,'#f_kind'), pool:PVT_PARTNERS.includes(v$(root,'#f_partner'))?v$(root,'#f_pool'):'company', amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date'), note:v$(root,'#f_note').trim()};
+      else if(type==='transfer') rec={...base, direction:v$(root,'#f_dir'), amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date'), note:v$(root,'#f_note').trim()};
       else if(type==='rep') rec={...base, name:v$(root,'#f_name').trim(), phone:v$(root,'#f_phone').trim(), note:v$(root,'#f_note').trim(), active:$('#f_active')?$('#f_active').checked:true};
       else if(type==='reppay') rec={...base, repId:v$(root,'#f_rep'), amount:n(v$(root,'#f_amount')), date:v$(root,'#f_date'), note:v$(root,'#f_note').trim()};
       else if(type==='sub') rec={...base, name:v$(root,'#f_name').trim(), amount:n(v$(root,'#f_amount')), cycle:v$(root,'#f_cycle'), nextDate:v$(root,'#f_next'), remindDays:n(v$(root,'#f_remind')), entity:v$(root,'#f_entity'), paidBy:v$(root,'#f_paidBy'), active:$('#f_active')?$('#f_active').checked:true, note:item?.note||null};
@@ -1203,6 +1216,16 @@ function openForm(type, id, preset={}){
       else if(type==='reppay') openRep(saved.repId);
       else closeSheet();
     };
+  });
+}
+
+function openTransfers(){
+  const list=[...S.transfers].sort(byDate);
+  sheet(`<h3>بين الشركة والحساب الخاص</h3><p class="sub">${books().pv.loanOwed>0?`الحساب الخاص مديون للشركة بـ ${money(books().pv.loanOwed)}`:'مفيش ديون بين الحسابين'}</p>
+    <div class="mini">${list.map(t=>`<div class="r"><div><b>${money(t.amount)}</b> <small>${t.direction==='to_pvt'?'سلفة للحساب الخاص':'رجعت للشركة'} · ${fdateY(t.date)}${t.note?' · '+esc(t.note):''}</small></div><button type="button" class="btn sm" data-t="${t.id}">تعديل</button></div>`).join('')||'<div class="r"><small>مفيش حاجة متسجلة</small></div>'}</div>
+    <div class="acts"><button type="button" class="btn grow" id="closeBtn">قفل</button></div>`, r=>{
+    r.querySelector('#closeBtn').onclick=closeSheet;
+    r.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>openForm('transfer', b.dataset.t));
   });
 }
 
@@ -1689,8 +1712,10 @@ let tt; function toast(msg){ clearTimeout(tt); document.querySelector('.toast')?
 /* ================= events ================= */
 document.querySelector('nav.tabs').addEventListener('click',e=>{ const b=e.target.closest('button[data-tab]'); if(!b) return; tab=b.dataset.tab; try{localStorage.setItem('tab',tab);}catch(_){}; render(); window.scrollTo(0,0); });
 document.getElementById('view').addEventListener('click',async e=>{
-  const t=e.target.closest('[data-open],[data-period],[data-cseg],[data-kind],[data-eseg],[data-dseg],[data-tseg],[data-pay],[data-reppay],[data-stmt],[data-done]'); if(!t) return;
+  const t=e.target.closest('[data-xfer],[data-xlist],[data-open],[data-period],[data-cseg],[data-kind],[data-eseg],[data-dseg],[data-tseg],[data-pay],[data-reppay],[data-stmt],[data-done]'); if(!t) return;
   const ds=t.dataset;
+  if(ds.xfer) return openForm('transfer',null,{direction:ds.xfer});
+  if(ds.xlist) return openTransfers();
   if(ds.open){ const [type,id]=ds.open.split(':'); if(type==='client') openClient(id); else if(type==='sub') openSub(id); else if(type==='task') openTask(id); else if(type==='rep') openRep(id); else openForm(type,id); return; }
   if(ds.period){ period=ds.period; return render(); }
   if(ds.cseg){ cliSeg=ds.cseg; return render(); }
