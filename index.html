@@ -482,9 +482,13 @@ async function syncNovenera(force){
       const due = days[c.noveneraTeacherId];
       const pick = (due && t.on_day) ? t.on_day : t.live;
       const counts = {...Object.fromEntries(NOV_KEYS.map(k=>[k, n(pick[k])])), day: due && t.on_day ? t.on_day.day : today(),
-        saved: !!(due && t.on_day && t.on_day.saved), missing: !!due && !t.on_day, live_billable: n(t.live?.billable), at: data.at};
+        saved: !!(due && t.on_day && t.on_day.saved), missing: !!due && !t.on_day, live_billable: n(t.live?.billable), at: data.at,
+        // Online platform fee (Novenera db/online/020): this month's fee and what is still owed. Settled in Novenera, not part of the cycle amount.
+        online_fee: t.online ? {month: n(t.online.fee_egp), students: n(t.online.students), purchases: n(t.online.purchases),
+          balance: n(t.online.balance), rule: t.online.rule || null, from: t.online.from} : null};
       const old = c.novCounts || {};
-      const same = NOV_KEYS.every(k=>n(old[k])===counts[k]) && old.day===counts.day && !!old.saved===counts.saved && n(old.live_billable)===counts.live_billable;
+      const same = NOV_KEYS.every(k=>n(old[k])===counts[k]) && old.day===counts.day && !!old.saved===counts.saved && n(old.live_billable)===counts.live_billable
+        && JSON.stringify(old.online_fee||null)===JSON.stringify(counts.online_fee);
       if(!same || n(c.students)!==counts.billable) await save('clients', {...c, students:counts.billable, novCounts:counts}, true);
     }
     if(force) toast('الأعداد اتحدثت من نوفينيرا');
@@ -503,7 +507,14 @@ function novBox(c){
     <div><span>متجمدين</span><b class="num">${n(k.center_frozen)+n(k.online_frozen)}</b></div>
     <div class="act"><span>العدد الفعلي</span><b class="num">${n(k.billable)}</b></div></div>
     <div class="nf"><span>${formula}${k.day!==today()&&n(k.live_billable)!==n(k.billable)?` · دلوقتي <span class="num">${n(k.live_billable)}</span>`:''}</span>
-    <button type="button" class="btn sm" id="novRefresh">تحديث</button></div></div>`;
+    <button type="button" class="btn sm" id="novRefresh">تحديث</button></div>${novOnlineFee(k.online_fee)}</div>`;
+}
+// Online platform fee line: shown only, the teacher pays it inside Novenera (Owner → حساب الأونلاين).
+function novOnlineFee(f){
+  if(!f || (!f.rule && !n(f.month) && !n(f.balance) && !n(f.purchases))) return '';
+  const r=f.rule, rule = !r ? 'لسه مفيش حساب متحدد' : r.mode==='percent' ? `${n(r.percent)}% من كل عملية`
+    : r.fixed_unit==='session' ? `${fmt(r.fixed_lesson)} ج.م على كل حصة` : 'مبلغ ثابت على كل عملية';
+  return `<div class="nf"><span>حساب الأونلاين (${rule}): الشهر ده ${fmt(f.month)} ج.م · <span class="num">${n(f.students)}</span> طالب دفعوا · الباقي عليه <b>${fmt(f.balance)} ج.م</b></span></div>`;
 }
 async function save(col, item, quiet){
   const id = item.id || uid();
