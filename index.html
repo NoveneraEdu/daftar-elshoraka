@@ -803,70 +803,161 @@ function attentionRow(it){
     <div class="amt"><span class="chip ${it.d<0?'bad':'warn'}">${relDay(it.d)}</span></div></button></div>`;
 }
 
+/* ================= money movements: every shekel, from where → to where ================= */
+const POOL_LBL = {company:'خزنة الشركة', pvt:'خزنة الحساب الخاص'};
+function moves(){
+  const cmap=Object.fromEntries(S.clients.map(c=>[c.id,c])), M=[];
+  const add=(o)=>M.push({createdAt:0, ...o});
+  S.payments.forEach(p=>{ const c=cmap[p.clientId]; if(!c) return; const pool=poolOfEnt(c.entity);
+    add({date:p.date, createdAt:p.createdAt, kind:'in', tag:'دفعة عميل', cls:'good', title:c.name, ent:c.entity,
+      from:c.name, to:POOL_LBL[pool], amount:n(p.amount), d:{[pool]:+n(p.amount)}, open:'client:'+c.id}); });
+  S.incomes.forEach(i=>{ const pool=poolOfEnt(i.entity);
+    add({date:i.date, createdAt:i.createdAt, kind:'in', tag:'دخل إضافي', cls:'good', title:i.desc, ent:i.entity,
+      from:'برا', to:POOL_LBL[pool], amount:n(i.amount), d:{[pool]:+n(i.amount)}, open:'income:'+i.id}); });
+  S.expenses.forEach(e=>{ const pool=poolOfEnt(e.entity), fromBox=e.paidBy==='company';
+    add({date:e.date, createdAt:e.createdAt, kind:'out', tag:fromBox?'مصروف':'مصروف · سلفة', cls:fromBox?'bad':'warn', title:e.desc, ent:e.entity||'general',
+      from:fromBox?POOL_LBL[pool]:PARTNERS[e.paidBy]+' من جيبه', to:e.desc, amount:n(e.amount),
+      d:fromBox?{[pool]:-n(e.amount)}:{}, note:fromBox?'':`ما خرجش من الخزنة · بقى سلفة لـ${PARTNERS[e.paidBy]}`, open:'expense:'+e.id}); });
+  S.payouts.forEach(x=>{ const pool=poolOf(x), adv=x.kind==='advance';
+    add({date:x.date, createdAt:x.createdAt, kind:'out', tag:adv?'رد سلفة':'سحب أرباح', cls:adv?'':'good', title:PARTNERS[x.partner]||'—', ent:pool==='pvt'?'pvt':null,
+      from:POOL_LBL[pool], to:PARTNERS[x.partner]||'—', amount:n(x.amount), d:{[pool]:-n(x.amount)}, note:x.note||'', open:'payout:'+x.id}); });
+  S.rep_payouts.forEach(x=>add({date:x.date, createdAt:x.createdAt, kind:'out', tag:'عمولة سيلز', cls:'', title:repName(x.repId),
+      from:POOL_LBL.company, to:repName(x.repId), amount:n(x.amount), d:{company:-n(x.amount)}, open:'rep:'+x.repId}));
+  S.transfers.forEach(t=>{ const toP=t.direction==='to_pvt';
+    add({date:t.date, createdAt:t.createdAt, kind:'xfer', tag:toP?'سلفة للحساب الخاص':'رجوع سلفة للشركة', cls:'', title:toP?'الشركة سلّفت الحساب الخاص':'الحساب الخاص رجّع للشركة',
+      from:toP?POOL_LBL.company:POOL_LBL.pvt, to:toP?POOL_LBL.pvt:POOL_LBL.company, amount:n(t.amount),
+      d:toP?{company:-n(t.amount), pvt:+n(t.amount)}:{company:+n(t.amount), pvt:-n(t.amount)}, note:t.note||''}); });
+  return M.sort(byDateAsc);
+}
+/* the company box, line by line: what came in and every way it went out */
+function boxSteps(pool){
+  const sum=f=>moves().filter(f).reduce((a,m)=>a+(m.d[pool]||0),0);
+  return [
+    ['دخل من العملاء والدخل الإضافي', sum(m=>m.kind==='in'), 'كل دفعة اتحصّلت'],
+    ['مصروفات اتدفعت من الخزنة', sum(m=>m.tag==='مصروف'), 'المصروفات اللي دفعها شريك من جيبه مش هنا، دي سلفة عليها'],
+    ['سلف رجعت للشركاء', sum(m=>m.tag==='رد سلفة'), ''],
+    ['أرباح سحبها الشركاء', sum(m=>m.tag==='سحب أرباح'), ''],
+    ['عمولات اتصرفت للسيلز', sum(m=>m.tag==='عمولة سيلز'), ''],
+    ['سلف بين الشركة والحساب الخاص', sum(m=>m.kind==='xfer'), pool==='company'?'سالب = الشركة سلّفت الحساب الخاص':'موجب = استلف من الشركة'],
+  ].filter(([,v],i)=>i===0||v);
+}
+
+let homeSeg='sum', flowPool='company';
 function vHome(){
-  const B=books(), C=B.company, P=B.pv, att=attention();
+  const seg=`<div class="seg" role="group">${[['sum','الخلاصة'],['who','مين ليه كام'],['flow','حركة الفلوس']].map(([k,l])=>`<button type="button" data-hseg="${k}" aria-pressed="${homeSeg===k}">${l}</button>`).join('')}</div>`;
+  return seg + (homeSeg==='who'?vHomeWho():homeSeg==='flow'?vHomeFlow():vHomeSum());
+}
+const wl=(l,v,cls='',sub='')=>`<div class="wl ${cls}"><span>${l}${sub?`<small>${sub}</small>`:''}</span><b>${money(v)}</b></div>`;
+const wlS=(l,v,cls='',sub='')=>`<div class="wl ${cls}${v<0?' neg':''}"><span>${l}${sub?`<small>${sub}</small>`:''}</span><b>${v<0?'− ':v>0?'+ ':''}${money(Math.abs(v))}</b></div>`;
+const pvtOn=()=>{ const P=books().pv; return S.clients.some(c=>c.entity==='pvt')||P.rev||P.cost||P.loanOwed; };
+
+function vHomeSum(){
+  const B=books(), C=B.company, P=B.pv, att=attention(), pvt=pvtOn();
   const lateTotal=S.clients.reduce((a,c)=>{ const st=clientState(c); return a+(st.k==='late'?st.owed:0); },0);
   const mf=flow(periodRange('month')), mName=AR_MONTHS[new Date().getMonth()];
-  const wl=(l,v,cls='',sub='')=>`<div class="wl ${cls}"><span>${l}${sub?`<small>${sub}</small>`:''}</span><b>${money(v)}</b></div>`;
+  const advC=PKEYS.filter(k=>B.p[k].adv.company-B.p[k].advRet.company>0);
+  const owedC=C.advOwed+Math.max(0,C.profitOwed)+(C.repOwed>0?C.repOwed:0);
+  const free=C.cash-owedC+(C.profitOwed<0?-C.profitOwed:0);
   const ents=EKEYS.filter(k=>B.ent[k].rev||B.ent[k].cost).map(k=>{ const e=B.ent[k];
-    return wl(`${ENTS[k].name}`, e.net, e.net<0?'neg':'', `دخل ${fmt(e.rev)} − مصروفات ${fmt(e.own)}${e.gen?` − نصيبها من المصروفات العامة ${fmt(e.gen)}`:''}`); }).join('');
-  const hasReps=S.reps.length>0||C.commTotal>0;
-  const pvtActive=S.clients.some(c=>c.entity==='pvt')||P.rev||P.cost;
+    return wl(ENTS[k].name, e.net, e.net<0?'neg':'', `دخل ${fmt(e.rev)} − مصروفاتها ${fmt(e.own)}${e.gen?` − نصيبها من المصروفات العامة ${fmt(e.gen)}`:''}`); }).join('');
   return `
     <section class="hero">
-      <div><div class="lbl">فلوس الشركة دلوقتي</div><div class="big">${money(C.cash)}</div></div>
+      <div><div class="lbl">الفلوس الموجودة فعلاً دلوقتي</div><div class="big">${money(C.cash+(pvt?P.cash:0))}</div></div>
       <div class="trio">
-        <div><span>${C.net<0?'عجز من الأول':'صافي الربح من الأول'}</span><b>${money(Math.abs(C.net))}</b></div>
-        <div><span>دخل ${mName}</span><b>${money(mf.rc)}</b></div>
+        <div><span>خزنة الشركة</span><b>${money(C.cash)}</b></div>
+        ${pvt?`<div><span>الحساب الخاص</span><b>${money(P.cash)}</b></div>`:`<div><span>دخل ${mName}</span><b>${money(mf.rc)}</b></div>`}
         <div><span>متأخرات عند العملاء</span><b>${money(lateTotal)}</b></div>
       </div>
     </section>
 
     <article class="card">
-      <div class="ch"><h2>حساب الشركة من الأول</h2><p>الأول المصاريف بتتسد، واللي يفضل هو الربح اللي بيتقسم.</p></div>
-      ${wl('الدخل', C.rev, '', 'كل اللي اتحصّل من عملاء الشركة')}
-      ${wl('− المصروفات', C.cost, '', 'اشتراكات وأدوات وأي مصروف، سواء دفعته الشركة أو شريك من جيبه')}
-      ${wl(C.net<0?'= عجز':'= صافي الربح', C.net, C.net<0?'tot neg':'tot pos')}
-      ${C.net<=0 ? `<div class="note bad">لسه مفيش أرباح تتقسم. الشركة محتاجة دخل ${money(C.deficit)} كمان عشان تغطي مصاريفها، وبعدها الأرباح تبدأ تتوزع.</div>`
-        : `${PKEYS.map(k=>wl(PARTNERS[k], B.p[k].earnedC, 'sub')).join('')}
-           ${wl('احتياطي الشركة (20%)', C.reserveGross, 'sub')}
-           ${C.commTotal?wl('− منه عمولات السيلز', C.commTotal, 'sub'):''}`}
+      <div class="ch"><h2>1. الشركة كسبانة ولا خسرانة؟</h2><p>من أول يوم: كل الدخل ناقص كل المصروفات، أياً كان مين دفعها.</p></div>
+      ${wl('الدخل', C.rev)}
+      ${wl('− المصروفات', C.cost, '', (()=>{ const pk=PKEYS.reduce((a,k)=>a+B.p[k].adv.company,0); return pk?`${fmt(C.cost-pk)} دفعتها الخزنة · ${fmt(pk)} دفعها شركاء من جيبهم (سلف)`:'كلها اتدفعت من الخزنة'; })())}
+      ${wl(C.net<0?'= خسارة (عجز)':'= صافي الربح', C.net, C.net<0?'tot neg':'tot pos')}
+      ${C.net<=0 ? `<div class="note bad">مفيش أرباح تتقسم لسه. محتاجين دخل ${money(C.deficit)} كمان يغطي المصاريف، وبعدها أي جنيه زيادة يتقسم على الشركاء.</div>`
+        : `<div class="note">الربح بيتقسم كده:</div>${PKEYS.map(k=>wl(PARTNERS[k], B.p[k].earnedC, 'sub')).join('')}${wl('احتياطي الشركة', C.reserveGross, 'sub', C.commTotal?`منه ${fmt(C.commTotal)} عمولات سيلز`:'')}`}
     </article>
 
     <article class="card">
-      <div class="ch"><h2>فلوس الشركة دي بتاعة مين؟</h2><p>الدخل ناقص كل اللي اتصرف = ${money(C.cash)}، ومتقسمة كده:</p></div>
-      ${wl('سلف لازم ترجع للشركاء', C.advOwed, '', 'فلوس دفعوها من جيبهم للشركة')}
-      ${wl('أرباح الشركاء اللي لسه ما اتسحبتش', C.profitOwed, C.profitOwed<0?'neg':'', C.profitOwed<0?'سحبوا أكتر من نصيبهم':'')}
-      ${hasReps?wl('عمولات السيلز اللي لسه ما اتصرفتش', C.repOwed):''}
-      ${wl('احتياطي الشركة', C.reserve, C.reserve<0?'neg':'')}
-      ${C.loanOut?wl('− سلفة للحساب الخاص', -C.loanOut, C.loanOut>0?'neg':'', 'فلوس الشركة اللي اتصرفت على الحساب الخاص وهترجع'):''}
-      ${C.deficit?wl('− العجز', -C.deficit, 'neg', 'المصروفات لسه أكبر من الدخل'):''}
-      ${wl('= فلوس الشركة', C.cash, 'tot'+(C.cash<0?' neg':''))}
-      ${C.cash<0?`<div class="note bad">الشركة صرفت أكتر من اللي دخلها بـ ${money(-C.cash)}. الفرق ده اتدفع من فلوس تانية${pvtActive?' (غالباً من الحساب الخاص)':''}، فهو دين على الشركة.</div>`:''}
+      <div class="ch"><h2>2. خزنة الشركة: جت منين وراحت فين؟</h2><p>ده الكاش الحقيقي، خطوة بخطوة.</p></div>
+      ${boxSteps('company').map(([l,v,s])=>wlS(l,v,'',s)).join('')}
+      ${wl('= الموجود في الخزنة', C.cash, 'tot'+(C.cash<0?' neg':''))}
+      <div class="foot" style="padding:10px 16px 14px;display:flex;gap:8px"><button type="button" class="btn sm" data-hseg="flow" data-fp="company">كل الحركات بالتفصيل</button></div>
     </article>
+
+    <article class="card">
+      <div class="ch"><h2>3. الـ${fmt(C.cash)} دي بتاعة مين؟</h2><p>الفلوس اللي في الخزنة، ناقص اللي الشركة لازم تدفعه لناس.</p></div>
+      ${wl('الموجود في الخزنة', C.cash)}
+      ${advC.map(k=>wl(`− سلفة لازم ترجع لـ${PARTNERS[k]}`, B.p[k].adv.company-B.p[k].advRet.company, 'sub', 'دفعها من جيبه للشركة')).join('')}
+      ${C.profitOwed>0?wl('− أرباح للشركاء لسه ما اتسحبتش', C.profitOwed, 'sub'):''}
+      ${C.repOwed>0?wl('− عمولات سيلز لسه ما اتصرفتش', C.repOwed, 'sub'):''}
+      ${C.profitOwed<0?wl('+ أرباح سحبها شركاء زيادة (لازم ترجع)', -C.profitOwed, 'sub'):''}
+      ${wl(free<0?'= ناقص (الشركة مديونة بيه)':'= فايض حر للشركة', free, 'tot'+(free<0?' neg':' pos'))}
+      ${free<0?`<div class="note bad">لو الشركة سدّت كل اللي عليها دلوقتي هيبقى ناقصها ${money(-free)}. ده نفس رقم الخسارة فوق${C.loanOut>0?' مع السلفة اللي اتدّت للحساب الخاص':''}، وبيتغطى أول ما الدخل يزيد.</div>`
+        : `<div class="note good">الشركة تقدر تسدّ كل اللي عليها ويفضل معاها ${money(free)} (احتياطي${C.loanOut>0?' + سلفة عند الحساب الخاص':''}).</div>`}
+    </article>
+
+    ${pvt?`<article class="card" style="--c:var(--pvt)">
+      <div class="ent-h"><i></i><div><h3>4. ${PVT.full}</h3><small>المدرسين القدام · منفصل تماماً عن الشركة</small></div></div>
+      ${wl('الدخل', P.rev)}${wl('− المصروفات', P.cost)}
+      ${wl(P.net<0?'= خسارة':'= صافي الربح', P.net, P.net<0?'tot neg':'tot pos')}
+      ${P.net>0?`${wl(`فتحي ${fmt(P.split.fathy*100)}%`, P.dist*P.split.fathy,'sub')}${wl(`عادل ${fmt(P.split.adel*100)}%`, P.dist*P.split.adel,'sub')}${P.split.reserve?wl(`احتياطي ${fmt(P.split.reserve*100)}%`, P.reserve,'sub'):''}`
+        :`<div class="note bad">محتاج دخل ${money(P.deficit)} كمان يغطي المصاريف.</div>`}
+      <div class="note">الخزنة خطوة بخطوة:</div>
+      ${boxSteps('pvt').map(([l,v,s])=>wlS(l,v,'',s)).join('')}
+      ${wl('= الموجود في الحساب الخاص', P.cash, 'tot'+(P.cash<0?' neg':''))}
+      ${P.loanOwed>0?`<div class="note bad">الحساب ده مديون للشركة بـ ${money(P.loanOwed)}.</div>`:''}
+      <div class="foot" style="padding:10px 16px 14px;display:flex;gap:8px;flex-wrap:wrap">${P.loanOwed>0?`<button type="button" class="btn sm" data-xfer="to_company">رجّع للشركة</button>`:''}<button type="button" class="btn sm" data-xfer="to_pvt">سلفة من الشركة</button><button type="button" class="btn sm" data-hseg="flow" data-fp="pvt">كل الحركات</button></div>
+    </article>`:''}
 
     <div class="sec-h"><h2>محتاج تتابعه</h2><small>${att.length? att.length+' حاجة':''}</small></div>
     <div class="list">${att.slice(0,8).map(attentionRow).join('') || `<div class="empty"><b>كله تمام 👌</b>مفيش دفعات متأخرة ولا تجديدات أو مهام قريبة.</div>`}</div>
 
-    ${pvtActive?`<article class="card" style="--c:var(--pvt)">
-      <div class="ent-h"><i></i><div><h3>${PVT.full}</h3><small>المدرسين القدام · برا حسابات الشركة خالص</small></div></div>
-      ${wl('الدخل', P.rev)}${wl('− المصروفات', P.cost)}
-      ${wl(P.net<0?'= عجز':'= صافي الربح', P.net, P.net<0?'tot neg':'tot pos')}
-      ${P.net<=0?`<div class="note bad">لسه مفيش أرباح في الحساب ده. محتاج دخل ${money(P.deficit)} كمان من المدرسين القدام يغطي المصاريف الأول.</div>`:''}
-      ${P.net>0?`${wl(`فتحي (${fmt(P.split.fathy*100)}%)`, P.dist*P.split.fathy,'sub')}${wl(`عادل (${fmt(P.split.adel*100)}%)`, P.dist*P.split.adel,'sub')}${P.split.reserve?wl(`احتياطي (${fmt(P.split.reserve*100)}%)`, P.reserve,'sub'):''}`:''}
-      ${P.loanOwed?wl('مديون للشركة', P.loanOwed, 'neg', 'استلفها من فلوس الشركة ولازم ترجعلها'):''}
-      ${wl('الفلوس اللي في الحساب ده دلوقتي', P.cash, P.cash<0?'neg':'')}
-      ${P.cash<0?`<div class="note bad">الحساب الخاص اتصرف منه أكتر من اللي دخله بـ ${money(-P.cash)}.</div>`:''}
-      <div class="foot" style="padding:10px 16px 14px;display:flex;gap:8px;flex-wrap:wrap">${P.loanOwed>0?`<button type="button" class="btn sm" data-xfer="to_company">رجّع للشركة</button>`:''}<button type="button" class="btn sm" data-xfer="to_pvt">سلفة من الشركة</button><button type="button" class="btn sm" data-xlist="1">السجل</button></div>
-    </article>`:''}
-
     <article class="card">
-      <div class="ch"><h2>شهر ${mName}</h2><p>الدخل والمصروفات اللي اتسجلت الشهر ده بس</p></div>
+      <div class="ch"><h2>شهر ${mName}</h2><p>اللي اتسجل الشهر ده بس</p></div>
       ${wl('دخل الشركة', mf.rc)}${wl('مصروفات الشركة', mf.ec)}${wl('الصافي', mf.rc-mf.ec, 'tot'+(mf.rc-mf.ec<0?' neg':''))}
-      ${pvtActive?wl('دخل الحساب الخاص', mf.rp, 'sub'):''}
+      ${pvt?wl('دخل الحساب الخاص', mf.rp, 'sub')+wl('مصروفات الحساب الخاص', mf.ep, 'sub'):''}
     </article>
 
-    ${ents?`<article class="card"><div class="ch"><h2>كل كيان لوحده</h2><p>صافي كل كيان من الأول بعد مصروفاته</p></div>${ents}</article>`:''}`;
+    ${ents?`<article class="card"><div class="ch"><h2>كل كيان لوحده</h2><p>صافي كل كيان من الأول. لو كيان خسران، الكيانات التانية بتغطيه الأول قبل ما حد ياخد ربح.</p></div>${ents}</article>`:''}`;
+}
+
+function vHomeWho(){
+  const B=books(), C=B.company, P=B.pv, pvt=pvtOn();
+  const line=(l,v,sub)=>v?wl(l,v,'sub'+(v<0?' neg':''),sub):'';
+  const people=PKEYS.map(k=>{ const x=B.p[k];
+    const ac=x.adv.company-x.advRet.company, ap=x.adv.pvt-x.advRet.pvt;
+    const body=[
+      line('سلفة عند الشركة', ac, `دفع ${fmt(x.adv.company)} · اترد له ${fmt(x.advRet.company)}`),
+      line('سلفة عند الحساب الخاص', ap, `دفع ${fmt(x.adv.pvt)} · اترد له ${fmt(x.advRet.pvt)}`),
+      line(x.profitC<0?'سحب أرباح شركة زيادة عن نصيبه':'أرباح شركة لسه ما سحبهاش', x.profitC, `نصيبه ${fmt(x.earnedC)} · سحب ${fmt(x.took.company)}`),
+      x.inPvt?line(x.profitP<0?'سحب من الخاص زيادة':'أرباح الحساب الخاص', x.profitP, `نصيبه ${fmt(x.earnedP)} · سحب ${fmt(x.took.pvt)}`):'',
+    ].join('');
+    return `<article class="card"><div class="wl tot${x.total<0?' neg':''}"><span>${PARTNERS[k]}<small>${x.total>0?'ليه':x.total<0?'عليه':'خالص'}</small></span><b>${money(x.total)}</b></div>
+      ${body||`<div class="note">مفيش حاجة ليه ولا عليه دلوقتي.</div>`}</article>`; }).join('');
+  const reps=S.reps.map(r=>({r,x:repSummary(r.id)})).filter(o=>o.x.balance).map(o=>wl(o.r.name, o.x.balance, 'sub', `عمولات ${fmt(o.x.earned)} · اتصرف ${fmt(o.x.paid)}`)).join('');
+  return `<p class="hint">كل رقم هنا = اللي حقه ناقص اللي أخده. «ليه» يعني الخزنة مديونة له، «عليه» يعني أخد أكتر من حقه.</p>
+    ${people}
+    ${reps?`<article class="card"><div class="ch"><h2>السيلز</h2><p>عمولات لسه ما اتصرفتش، بتتدفع من خزنة الشركة</p></div>${reps}</article>`:''}
+    ${pvt&&P.loanOwed?`<article class="card">${wl('الحساب الخاص مديون للشركة', P.loanOwed, 'tot neg', 'سلفة اتاخدت من خزنة الشركة')}</article>`:''}
+    <div class="tools"><button type="button" class="btn" data-tab-go="team">صرف لشريك / كشف حساب ←</button></div>`;
+}
+
+function vHomeFlow(){
+  const all=moves(), pvt=pvtOn();
+  const pools=pvt?[['company','خزنة الشركة'],['pvt','الحساب الخاص'],['all','الكل']]:[['company','خزنة الشركة'],['all','الكل']];
+  if(!pvt && flowPool==='pvt') flowPool='company';
+  const list = flowPool==='all' ? all : all.filter(m=>m.d[flowPool]!==undefined || (flowPool==='company' ? m.ent!=='pvt' && m.kind==='out' && !Object.keys(m.d).length : m.ent==='pvt' && !Object.keys(m.d).length));
+  let bal=0;
+  const rows=list.map(m=>{ const dv=flowPool==='all'?null:(m.d[flowPool]||0); if(dv!==null) bal+=dv;
+    return {m, dv, bal}; }).reverse().map(({m,dv,bal})=>`<div class="row"><button type="button" class="tap"${m.open?` data-open="${m.open}"`:''}>
+      <div class="main"><div class="t">${esc(m.title)} <span class="chip ${m.cls}">${m.tag}</span></div>
+      <div class="s">${esc(m.from)} ← ${esc(m.to)} · ${fdateY(m.date)}</div>${m.note?`<div class="s">${esc(m.note)}</div>`:''}</div>
+      <div class="amt"><b style="color:${dv===null?'inherit':dv>0?'var(--good)':dv<0?'var(--bad)':'var(--muted)'}">${dv===null?'':dv>0?'+ ':dv<0?'− ':''}${money(m.amount)}</b>${dv!==null?`<span class="chip">الرصيد ${fmt(bal)}</span>`:''}</div></button></div>`).join('');
+  return `<div class="chips" role="group">${pools.map(([k,l])=>`<button type="button" data-fpool="${k}" aria-pressed="${flowPool===k}">${l}</button>`).join('')}</div>
+    <p class="hint">كل جنيه دخل أو خرج، من مين ← لمين، الأحدث فوق. ${flowPool==='all'?'':'«الرصيد» = اللي كان في الخزنة بعد الحركة دي.'} المصروف اللي دفعه شريك من جيبه بيظهر من غير ما يغيّر الرصيد، لأنه بقى سلفة.</p>
+    <div class="list">${rows||`<div class="empty"><b>مفيش حركات لسه</b>أول دفعة عميل أو مصروف هيظهر هنا.</div>`}</div>`;
 }
 
 function vClients(){
@@ -957,12 +1048,14 @@ function vTeam(){
     const shares=EKEYS.filter(e=>ENTS[e].split[k]).map(e=>`${ENTS[e].name} ${ENTS[e].split[k]*100}%`).join(' · ');
     return `<article class="card pcard">
       <div class="head"><div><h3>${PARTNERS[k]}</h3><small>${shares}</small></div><div class="bal"><small>المستحق له كله</small><b style="color:${x.total<0?'var(--bad)':'var(--ink)'}">${money(x.total)}</b></div></div>
-      <div class="pblk"><div class="lbl">1. السلف <small>فلوس دفعها من جيبه وبترجعله زي ما هي</small></div>
-        <div class="cells c3">${cell('دفع',x.advPaid)}${cell('اترد له',x.advBack)}${cell('باقي له',x.advOwed, x.advOwed<0?'style="color:var(--bad)"':'')}</div></div>
-      <div class="pblk"><div class="lbl">2. أرباح الشركة <small>${C.net<=0?'لسه مفيش أرباح · الشركة في عجز':'نصيبه من صافي الربح'}</small></div>
-        <div class="cells c3">${cell('نصيبه',x.earnedC)}${cell('سحب',x.took.company)}${cell(x.profitC<0?'سحب زيادة':'باقي له',Math.abs(x.profitC), x.profitC<0?'style="color:var(--bad)"':'')}</div></div>
-      ${x.inPvt?`<div class="pblk"><div class="lbl">3. ${PVT.name} <small>المدرسين القدام</small></div>
-        <div class="cells c3">${cell('نصيبه',x.earnedP)}${cell('سحب',x.took.pvt)}${cell(x.profitP<0?'سحب زيادة':'باقي له',Math.abs(x.profitP), x.profitP<0?'style="color:var(--bad)"':'')}</div></div>`:''}
+      ${(()=>{ const L=(t,a,al,b,bl,r,rl)=>`<div class="pblk"><div class="lbl">${t}</div><div class="cells c3">${cell(al,a)}${cell(bl,b)}${cell(rl,Math.abs(r), r<0?'style="color:var(--bad)"':'')}</div></div>`;
+        const ac=x.adv.company-x.advRet.company, ap=x.adv.pvt-x.advRet.pvt;
+        return [
+          (x.adv.company||x.advRet.company)?L('سلف دفعها للشركة <small>بترجعله زي ما هي</small>', x.adv.company,'دفع من جيبه', x.advRet.company,'اترد له', ac, ac<0?'اترد زيادة':'باقي له'):'',
+          x.inPvt&&(x.adv.pvt||x.advRet.pvt)?L(`سلف دفعها للحساب الخاص`, x.adv.pvt,'دفع من جيبه', x.advRet.pvt,'اترد له', ap, ap<0?'اترد زيادة':'باقي له'):'',
+          L(`أرباح الشركة <small>${C.net<=0?'لسه مفيش أرباح · الشركة في عجز':'نصيبه من صافي الربح'}</small>`, x.earnedC,'نصيبه', x.took.company,'سحب', x.profitC, x.profitC<0?'سحب زيادة':'باقي له'),
+          x.inPvt?L(`أرباح ${PVT.name}`, x.earnedP,'نصيبه', x.took.pvt,'سحب', x.profitP, x.profitP<0?'سحب زيادة':'باقي له'):'',
+        ].join(''); })()}
       <div class="foot">${x.advOwed>0?`<button type="button" class="btn sm" data-pay="${k}:advance">رد سلفة</button>`:''}<button type="button" class="btn sm" data-pay="${k}:profit">سحب أرباح</button><button type="button" class="btn sm" data-stmt="partner:${k}">${PDF_SVG} كشف حساب</button></div>
     </article>`; }).join('');
   const hist=[...S.payouts].sort(byDate).map(x=>`<div class="row"><button type="button" class="tap" data-open="payout:${x.id}">
@@ -1724,7 +1817,7 @@ let tt; function toast(msg){ clearTimeout(tt); document.querySelector('.toast')?
 /* ================= events ================= */
 document.querySelector('nav.tabs').addEventListener('click',e=>{ const b=e.target.closest('button[data-tab]'); if(!b) return; tab=b.dataset.tab; try{localStorage.setItem('tab',tab);}catch(_){}; render(); window.scrollTo(0,0); });
 document.getElementById('view').addEventListener('click',async e=>{
-  const t=e.target.closest('[data-undo],[data-undo-yes],[data-undo-no],[data-xfer],[data-xlist],[data-open],[data-period],[data-cseg],[data-kind],[data-eseg],[data-dseg],[data-tseg],[data-pay],[data-reppay],[data-stmt],[data-done]'); if(!t) return;
+  const t=e.target.closest('[data-undo],[data-undo-yes],[data-undo-no],[data-xfer],[data-xlist],[data-open],[data-period],[data-cseg],[data-kind],[data-eseg],[data-dseg],[data-tseg],[data-hseg],[data-fpool],[data-tab-go],[data-pay],[data-reppay],[data-stmt],[data-done]'); if(!t) return;
   const ds=t.dataset;
   if(ds.undo){ const x=S.payouts.find(y=>y.id===ds.undo); if(!x) return; const row=t.closest('.row');
     row.innerHTML=`<div class="confirm"><span>تلغي ${x.kind==='advance'?'رد السلفة':'سحب الأرباح'} ده (${fmt(x.amount)} ج.م لـ ${PARTNERS[x.partner]})؟</span><button type="button" class="btn sm dan" data-undo-yes="${x.id}">أيوه ألغيه</button><button type="button" class="btn sm" data-undo-no="1">لا</button></div>`; return; }
@@ -1739,6 +1832,9 @@ document.getElementById('view').addEventListener('click',async e=>{
   if(ds.eseg){ expSeg=ds.eseg; return render(); }
   if(ds.dseg){ dateSeg=ds.dseg; return render(); }
   if(ds.tseg){ teamSeg=ds.tseg; return render(); }
+  if(ds.hseg){ homeSeg=ds.hseg; if(ds.fp) flowPool=ds.fp; render(); return window.scrollTo(0,0); }
+  if(ds.fpool){ flowPool=ds.fpool; return render(); }
+  if(ds.tabGo){ tab=ds.tabGo; try{localStorage.setItem('tab',tab);}catch(_){}; render(); return window.scrollTo(0,0); }
   if(ds.pay){ const [partner,kind]=ds.pay.split(':'); return openForm('payout',null,{partner, kind:kind||'profit'}); }
   if(ds.reppay) return openForm('reppay',null,{repId:ds.reppay});
   if(ds.stmt){ const [k,id]=ds.stmt.split(':'); return statementFlow(k,id); }
