@@ -448,9 +448,9 @@ const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const MAP = {desc:'description', paidBy:'paid_by', createdAt:'created_at', fixedAmount:'fixed_amount', nextDue:'next_due',
   clientId:'client_id', nextDate:'next_date', remindDays:'remind_days', dueDate:'due_date', dueTime:'due_time',
   repId:'rep_id', commissionType:'commission_type', commissionValue:'commission_value', commissionMonths:'commission_months', invoiceNo:'invoice_no',
-  noveneraTeacherId:'novenera_teacher_id', onlinePrice:'online_price', novCounts:'nov_counts'};
+  noveneraTeacherId:'novenera_teacher_id', onlinePrice:'online_price', novCounts:'nov_counts', onlineFee:'online_fee'};
 const RMAP = Object.fromEntries(Object.entries(MAP).map(([a,b])=>[b,a]));
-const NUMS = new Set(['price','amount','collected','fixed_amount','students','remind_days','commission_value','commission_months','invoice_no','online_price']);
+const NUMS = new Set(['price','amount','collected','fixed_amount','students','remind_days','commission_value','commission_months','invoice_no','online_price','online_fee']);
 const toRow = o => Object.fromEntries(Object.entries(o).filter(([k])=>!k.startsWith('_')).map(([k,v])=>[MAP[k]||k, v===''?null:v]));
 const fromRow = o => Object.fromEntries(Object.entries(o).map(([k,v])=>[RMAP[k]||k, NUMS.has(k)&&v!==null?Number(v):v]));
 
@@ -468,14 +468,16 @@ async function loadAll(){
 // Renewal day reached → the number saved that morning (doesn't change afterwards); otherwise live.
 let NOV = {teachers:[], at:null, err:false, busy:false};
 const NOV_KEYS = ['center_total','center_frozen','center_active','online_total','online_frozen','online_active','billable'];
-async function syncNovenera(force){
-  if(NOV.busy) return; NOV.busy=true;
+async function syncNovenera(force, extra){
+  if(NOV.busy && !extra) return; NOV.busy=true;
   try{
     const linked = S.clients.filter(c=>c.noveneraTeacherId);
     const days = {};
     linked.forEach(c=>{ if(c.cycle!=='once' && c.nextDue && c.nextDue<=today()) days[c.noveneraTeacherId]=c.nextDue; });
-    const {data, error} = await sb.functions.invoke('novenera-counts', {body:{days}});
+    const {data, error} = await sb.functions.invoke('novenera-counts', {body:{days, ...(extra||{})}});
     if(error || !data?.teachers) throw error||new Error('bad');
+    // An older server without settle support answers without `settled`: that is a failure too, never a silent success.
+    if(extra && (!Array.isArray(data.settled) || data.settled.some(x=>x.error))) throw new Error('settle');
     NOV = {teachers:data.teachers, at:data.at, err:false, busy:true};
     for(const c of linked){
       const t = data.teachers.find(x=>x.id===c.noveneraTeacherId); if(!t) continue;
@@ -492,9 +494,14 @@ async function syncNovenera(force){
       if(!same || n(c.students)!==counts.billable) await save('clients', {...c, students:counts.billable, novCounts:counts}, true);
     }
     if(force) toast('الأعداد اتحدثت من نوفينيرا');
-  }catch(e){ NOV.err=true; if(force) toast('مش قادر أوصل لنوفينيرا دلوقتي'); }
+    return true;
+  }catch(e){ NOV.err=true; if(force||extra) toast(extra?'الدفعة اتسجلت، بس حساب الأونلاين ماوصلش لنوفينيرا. افتح العميل واضغط تحديث':'مش قادر أوصل لنوفينيرا دلوقتي'); return false; }
   finally{ NOV.busy=false; render(); }
 }
+// Online platform fee: what the teacher still owes inside Novenera (0 when unknown).
+const novOnlineDue = c => novLinked(c) && c.novCounts.online_fee ? Math.max(0, n(c.novCounts.online_fee.balance)) : 0;
+// A payment that includes the online fee settles it in Novenera (ref = payment id: sending again changes nothing).
+const novSettle = (c, p) => syncNovenera(false, {settle:[{teacher_id:c.noveneraTeacherId, amount:n(p.onlineFee), paid_on:p.date, ref:p.id}]});
 function novBox(c){
   const k=c.novCounts, cfg=kcfg(c);
   const dayTxt = k.missing ? 'مفيش رقم متسجل يوم '+fdate(k.day)+'، ده الرقم الحالي' : k.saved ? 'رقم يوم التجديد '+fdate(k.day)+' (اتحفظ الصبح)' : 'الأرقام دلوقتي';
@@ -1356,7 +1363,7 @@ function openClient(id){
       <button type="button" class="btn" id="stmtBtn">${PDF_SVG} كشف حساب</button>
     </div>
     <div class="sec-h" style="margin-top:16px"><h2 style="font-size:14px">سجل الدفعات</h2><small>${pays.length}</small></div>
-    <div class="mini">${pays.map(p=>`<div class="r"><div><b>${money(p.amount)}</b> <small>${fdateY(p.date)}${p.invoiceNo?' · '+invNo(p,c):''}${p.note?' · '+esc(p.note):''}</small></div>
+    <div class="mini">${pays.map(p=>`<div class="r"><div><b>${money(p.amount)}</b> <small>${fdateY(p.date)}${p.invoiceNo?' · '+invNo(p,c):''}${p.note?' · '+esc(p.note):''}${n(p.onlineFee)>0?' · منها أونلاين '+fmt(p.onlineFee):''}</small></div>
       <div class="tools"><button type="button" class="btn sm" data-inv="${p.id}">${PDF_SVG} فاتورة</button><button type="button" class="btn sm" data-delpay="${p.id}" aria-label="حذف الدفعة">✕</button></div></div>`).join('')||'<div class="r"><small>لسه مفيش دفعات</small></div>'}</div>
     <div class="acts"><button type="button" class="btn grow" id="editBtn">تعديل البيانات</button><button type="button" class="btn" id="closeBtn">قفل</button></div>`, root=>{
     root.querySelector('#closeBtn').onclick=closeSheet;
@@ -1370,30 +1377,41 @@ function openClient(id){
     root.querySelectorAll('[data-delpay]').forEach(b=>b.onclick=()=>{
       const r=b.closest('.r'); r.innerHTML=`<div class="confirm"><span>تحذف الدفعة دي؟</span><button type="button" class="btn sm dan" data-yes>احذف</button><button type="button" class="btn sm" data-no>لا</button></div>`;
       r.querySelector('[data-no]').onclick=()=>openClient(id);
-      r.querySelector('[data-yes]').onclick=async()=>{ await remove('payments', b.dataset.delpay); openClient(id); };
+      r.querySelector('[data-yes]').onclick=async()=>{
+        const pay=S.payments.find(x=>x.id===b.dataset.delpay);
+        await remove('payments', b.dataset.delpay);
+        if(n(pay?.onlineFee)>0) await syncNovenera(false, {unsettle:[pay.id]});
+        openClient(id); };
     });
   });
 }
 const invNo = (p,c) => `${ENTS[bkey(c?.entity)]?.code||'INV'}-${(p.date||'').slice(0,4)}-${String(p.invoiceNo||0).padStart(4,'0')}`;
 function openPayment(clientId){
   const c=S.clients.find(x=>x.id===clientId); const st=clientState(c), amt=cycleAmount(c);
-  const def = st.owed>0 ? st.owed : c.cycle==='once' ? Math.max(0,amt-paidBy(c.id)) : amt;
+  const base = st.owed>0 ? st.owed : c.cycle==='once' ? Math.max(0,amt-paidBy(c.id)) : amt;
+  const onl = novOnlineDue(c);
+  const def = base + onl;
   sheet(`<h3>دفعة من ${esc(c.name)}</h3><p class="sub">${CYCLES[c.cycle]} · الدفعة ${money(amt)}</p><form id="frm" novalidate><div class="fields">
       <div class="f2"><label class="fl">المبلغ<input id="f_amount" type="number" inputmode="decimal" step="any" min="0" required value="${def||''}"></label>
       <label class="fl">التاريخ<input id="f_date" type="date" value="${today()}"></label></div>
+      ${onl>0?`<label class="cb"><input type="checkbox" id="f_onl" checked> ومعاها حساب الأونلاين <b>${money(onl)}</b> (بيتصفّر في نوفينيرا)</label>`:''}
       <label class="fl">طريقة الدفع<select id="f_note">${['كاش','فودافون كاش','إنستاباي','تحويل بنكي','أخرى'].map(x=>`<option>${x}</option>`).join('')}</select></label>
       ${c.cycle!=='once'&&c.nextDue?`<label class="cb"><input type="checkbox" id="f_adv" checked> حرّك ميعاد الدفعة الجاية لـ <b id="advTo"></b></label>`:''}
     </div><div class="acts"><button type="submit" class="btn pri grow">سجّل</button><button type="button" class="btn" id="cancelBtn">إلغاء</button></div></form>`, root=>{
     const $=s=>root.querySelector(s);
-    const k=()=> amt>0 ? Math.max(1, Math.floor(n($('#f_amount').value)/amt + 1e-9)) : 1;
+    const onlPart=()=> $('#f_onl')?.checked ? Math.min(onl, n($('#f_amount').value)) : 0;
+    const k=()=> amt>0 ? Math.max(1, Math.floor((n($('#f_amount').value)-onlPart())/amt + 1e-9)) : 1;
     const upd=()=>{ if($('#advTo')) $('#advTo').textContent=fdate(addCycle(c.nextDue,c.cycle,k())); };
     $('#f_amount').addEventListener('input',upd); upd();
+    $('#f_onl')?.addEventListener('change',()=>{ const v=n($('#f_amount').value); $('#f_amount').value = $('#f_onl').checked ? v+onl : Math.max(0, v-onl); upd(); });
     $('#cancelBtn').onclick=()=>openClient(clientId);
     $('#frm').onsubmit=async e=>{
       e.preventDefault(); if(!required(root)) return;
       const invoiceNo = S.payments.reduce((a,p)=>Math.max(a,n(p.invoiceNo)),0)+1;
       const p={clientId, amount:n($('#f_amount').value), date:$('#f_date').value||today(), note:$('#f_note').value, invoiceNo, createdAt:Date.now()};
+      if(onlPart()>0) p.onlineFee=onlPart();
       const saved=await save('payments', p, true); if(!saved) return;
+      if(n(saved.onlineFee)>0) await novSettle(c, saved);
       if($('#f_adv')?.checked){ await save('clients', {...c, nextDue:addCycle(c.nextDue,c.cycle,k())}, true); }
       toast('اتسجلت الدفعة');
       invoiceFlow(saved.id, ()=>openClient(clientId), true);

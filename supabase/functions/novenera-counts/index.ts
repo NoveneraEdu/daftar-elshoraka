@@ -2,6 +2,8 @@
 // Only the signed-in owner (is_owner()) can call it. The key for Novenera's billing-api lives in the
 // private table integration_keys (no browser access), so it never reaches the page or this repo.
 // Body: { days?: { "<novenera teacher id>": "YYYY-MM-DD" } } → numbers on that renewal day too.
+// Also { settle?: [{ teacher_id, amount, paid_on, ref }], unsettle?: [ref] }: a payment that includes the online platform
+// fee clears it in Novenera (ref = Sahm payment id), and deleting that payment puts it back.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const NOVENERA = "https://iiqxeaocbkqehltqodgp.supabase.co/functions/v1/billing-api";
@@ -31,7 +33,9 @@ Deno.serve(async (req) => {
     const r = await fetch(NOVENERA, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-billing-key": k.secret },
-      body: JSON.stringify({ days: body?.days ?? {} }),
+      body: JSON.stringify({ days: body?.days ?? {},
+        ...(Array.isArray(body?.settle) ? { settle: body.settle } : {}),
+        ...(Array.isArray(body?.unsettle) ? { unsettle: body.unsettle } : {}) }),
     });
     if (!r.ok) return json({ error: "novenera_" + r.status }, 502);
     return json(await r.json());
